@@ -132,7 +132,7 @@ Complete_commut <- function(
 # 	# voir si a terme on peut pas faire une mega table avec les dimensions simplement triees et parcourir toutes les lignes de la derniere a la premiere
 
 
-# test modif pour commit
+# test modif pour commit : new
 
 # # est-ce qu'un argument est bien "missing" meme si il a une valeur par defaut ?
 # 	testFun <- function(a = 2, b){
