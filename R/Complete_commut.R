@@ -15,10 +15,11 @@ Complete_commut <- function(
 	, incName = NULL
 	, messages = FALSE
 ){
-	manualrun <- F
 	manualrun <- T
+	manualrun <- F
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
+		library(data.table)
 		tbls <- readRDS(list.files("../pop stats/INPUTS", "tabl.*rds", full.names = T))
 		lxTable = tbls$TE[1:10**4] ; dimNames = NULL # TE : table de survie bien longue (10k lignes)
 		lxTable = rbind(
@@ -29,9 +30,9 @@ Complete_commut <- function(
 		# dimNames = c("sexe","lx")
 		incName = "age"
 		lxTable = tbls$lg_maintien_HF ; dimNames = c("x", "sexe") ; incName = "anc"
+		lxTable = tbls$bigTables$bigTable_20 ; dimNames = c("x", "sexe", "newDimTest") ; incName = "anc"
 		# key_vars = c(dimNames, incName)
 		# lxTable = tbls$BT1_prefixed
-		library(data.table)
 		messages = T
 	}
 	tableToFill <- as.data.table(copy(lxTable))
@@ -85,19 +86,34 @@ Complete_commut <- function(
 		tableToFill_lxp1[, Dx := lx * v^inc]			# DX
 		tableToFill_lxp1[is.na(tableToFill_lxp1)] <- 0
 
-		dim_combinaisons <- unique(tableToFill_lxp1$dims)
-		tableToFill_Nx <- tableToFill_lxp1[0]
-		for (dim_combinaison in dim_combinaisons){
-			# dim_combinaison <- dim_combinaisons[1]
-			if (messages) print(dim_combinaison)
-			tableToFill_lxp1_ext <- copy(tableToFill_lxp1[dims == dim_combinaison][order(inc)]) # peut etre mettre un "order(inc)" ici ? Bah ouais
-			rows_index_decr <- nrow(tableToFill_lxp1_ext):1
-			# attention cumsum bien pratique mais super risque des qu'il y aura plusieurs dimensions, a surveiller --> Simplement trier et traiter par combinaisons de dimensions
-			tableToFill_lxp1_ext$Nx <- cumsum(tableToFill_lxp1_ext$Dx[rows_index_decr])[rows_index_decr] # plus efficace. juste, il faut renverser le vecteur le temps de sommer puis re renverser, mais ça va
+		# # version "boucle sur les dims", + comparaison avec la version "cumsum + by" beaucoup plus rapide
+		# dim_combinaisons <- unique(tableToFill_lxp1$dims)
+		# tableToFill_Nx <- tableToFill_lxp1[0]
+		# for (dim_combinaison in dim_combinaisons){
+		# 	# dim_combinaison <- dim_combinaisons[1]
+		# 	if (messages) print(dim_combinaison)
+		# 	tableToFill_lxp1_ext <- copy(tableToFill_lxp1[dims == dim_combinaison][order(inc)]) # peut etre mettre un "order(inc)" ici ? Bah ouais
+		# 	rows_index_decr <- nrow(tableToFill_lxp1_ext):1
+		# 	# attention cumsum bien pratique mais super risque des qu'il y aura plusieurs dimensions, a surveiller --> Simplement trier et traiter par combinaisons de dimensions
+		# 	tableToFill_lxp1_ext$Nx <- cumsum(tableToFill_lxp1_ext$Dx[rows_index_decr])[rows_index_decr] # plus efficace. juste, il faut renverser le vecteur le temps de sommer puis re renverser, mais ça va
+		#
+		# 	tableToFill_Nx <- rbind(tableToFill_Nx, tableToFill_lxp1_ext, fill = T)
+		# }# toute cette boucle est probablement peu efficace + verifier divers problemes possibles (lignes dans le desordre par ex ? ou autres incoherences)
+		#
+		# tableToFill_Nx[1:40]
+		# tableToFill_Nx[ order(dims, -inc)
+		# 	, Nx_test := cumsum(Dx)
+		# 	, by = .(dims)
+		# ]
+		# tableToFill_Nx[!Nx == Nx_test]
 
-			tableToFill_Nx <- rbind(tableToFill_Nx, tableToFill_lxp1_ext, fill = T)
-		}# toute cette boucle est probablement peu efficace + verifier divers problemes possibles (lignes dans le desordre par ex ? ou autres incoherences)
+		tableToFill_lxp1[
+			order(dims, -inc)
+			, Nx := cumsum(Dx)
+			, by = .(dims)
+		]
 
+		tableToFill_Nx <- tableToFill_lxp1[order(dims, inc)] # a remettre bien apres au niveau des noms
 		tableToFill_Nx[, a_pp_x := Nx/Dx] 			# äx
 		tableToFill_Nx[, ax := a_pp_x - 1] 			# ax
 		tableToFill_Nx[is.na(tableToFill_Nx)] <- 0
