@@ -4,22 +4,16 @@
 \alias{Complete_commut}
 \title{adding commutation numbers to a mortality table}
 \usage{
-Complete_commut(
-  lxTable,
-  i,
-  dim_names = NULL,
-  inc_name = "age",
-  messages = FALSE
-)
+Complete_commut(lxTable, i, dimNames = NULL, incName = NULL, messages = FALSE)
 }
 \arguments{
 \item{lxTable}{2 columns : age and lx}
 
 \item{i}{actualisation rate}
 
-\item{dim_names}{= c("sexe")}
+\item{dimNames}{parameters other than inc and val (such as generation, sex, age when turning dependent)}
 
-\item{inc_name}{= "age"}
+\item{incName}{the x in "lx". Most of the time, age. for dependence tables, usually the nb of years since turning dependent}
 
 \item{messages}{= FALSE}
 }
