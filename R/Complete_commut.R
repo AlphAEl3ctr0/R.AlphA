@@ -39,7 +39,7 @@ Complete_commut <- function(
 	tableToFill <- as.data.table(copy(lxTable))
 	if(missing(i)) {message("i is missing : set to 0 by default"); i <- 0}
 	v <- 1/(1+i)
-	# identifier les noms dans la table
+	# identifier les colonnes de la table : inc / val / dim / autres ----
 		namesTable <- data.table(names = names(tableToFill))
 		namesTable[, find_pattern := stringr::str_extract(names,"^(dim|val|inc)(?=_)")]
 
@@ -52,27 +52,40 @@ Complete_commut <- function(
 				if (messages) print("val column not found : default lx")
 				valName <- "lx"
 			}
-		if (missing(incName)) incName <- namesTable[find_pattern == "inc"]$names
-		if (missing(dimNames)) dimNames <- namesTable[find_pattern == "dim"]$names
+			tableToFill[, lx := get(valName)]
+		# increment
+			if (missing(incName)) incName <- namesTable[find_pattern == "inc"]$names
+		# dimensions
+			if (missing(dimNames)) dimNames <- namesTable[find_pattern == "dim"]$names
 
-	tableToFill[, lx := get(valName)]
-	tableToFill[is.na(lx), lx := 0] # retraitement
 
-	separator <- "_"
-	if (is.null(dimNames)) {
-		if (messages) print("no dims used, only inc and value")
-		tableToFill[, dims := ""]
-	} else {
-		if (messages) print(paste0(c("dimNames : ", dimNames), collapse = " - "))
-		tableToFill[, dims := do.call(paste, c(.SD, sep = separator)), .SDcols = dimNames] # verifier avec un vecteur vide
-	}
-	tableToFill[, inc := readr::parse_number(as.character(get(incName)))] # finalement c'est bien oblige de l'avoir en nombre (pour trier)
-	tableToFill[, key := do.call(paste, c(.SD, sep = separator)), .SDcols = c("dims", "inc")]
-	tableToFill[, key_names := paste(c(dimNames, incName), collapse = separator)]
+	# retraitements
+		# value
+			tableToFill[is.na(lx), lx := 0] # passe les NA a 0
+		# increment
+			tableToFill[, inc := readr::parse_number(as.character(get(incName)))] # finalement c'est bien oblige de l'avoir en nombre (pour trier)
+		# dimensions
+			separator <- "_"
+			if (is.null(dimNames)) {
+				if (messages) print("no dims used, only inc and value")
+				tableToFill[, dims := ""]
+			} else {
+				if (messages) print(paste0(c("dimNames : ", dimNames), collapse = " - "))
+				tableToFill[
+					, dims := do.call(paste, c(.SD, sep = separator))
+					, .SDcols = dimNames
+					] # verifier avec un vecteur vide
+			}
+
+		# key
+			tableToFill[, key := do.call(paste, c(.SD, sep = separator)), .SDcols = c("dims", "inc")] # TODO: gerer le cas ou il n'y a pas de dims, juste une table normale
+			tableToFill[, key_names := paste(c(dimNames, incName), collapse = separator)]
+
+
 	tableToFill[, inc_p1 := inc+1]
 	tableToFill[, key_xp1 := do.call(paste, c(.SD, sep = separator)), .SDcols = c("dims", "inc_p1")]
 
-	# version 3 : 'join', jointure pour avoir lx+1, et boucle seulement pour Nx
+	# lx+1
 		tableToFill_lxp1 <- merge(
 			tableToFill
 			, tableToFill[ , .(key, lxp1 = lx)]
@@ -87,17 +100,18 @@ Complete_commut <- function(
 		tableToFill_lxp1[is.na(tableToFill_lxp1)] <- 0
 
 
-	# V4 : meme pour les Nx, pas de boucle mais plutot un "by"
+	# Nx
 		tableToFill_lxp1[
 			order(dims, -inc)
 			, Nx := cumsum(Dx)
 			, by = .(dims)
 		]
-
 		tableToFill_Nx <- tableToFill_lxp1[order(dims, inc)] # a remettre bien apres au niveau des noms
-		tableToFill_Nx[, a_pp_x := Nx/Dx] 			# äx
-		tableToFill_Nx[, ax := a_pp_x - 1] 			# ax
-		tableToFill_Nx[is.na(tableToFill_Nx)] <- 0
+
+
+	tableToFill_Nx[, a_pp_x := Nx/Dx] 			# äx
+	tableToFill_Nx[, ax := a_pp_x - 1] 			# ax
+	tableToFill_Nx[is.na(tableToFill_Nx)] <- 0
 	# remise dans une forme plus pratique / lisible / simple
 		tableToFill_Nx[
 			, `:=` (
