@@ -4,7 +4,14 @@
 \alias{Complete_commut}
 \title{adding commutation numbers to a mortality table}
 \usage{
-Complete_commut(lxTable, i, dimNames = NULL, incName = NULL, messages = FALSE)
+Complete_commut(
+  lxTable,
+  i = 0,
+  dimNames = "dim_.*",
+  incName = "(inc_.*)|age|x",
+  valName = "(val_.*)|lx",
+  messages = FALSE
+)
 }
 \arguments{
 \item{lxTable}{2 columns : age and lx}
@@ -14,6 +21,8 @@ Complete_commut(lxTable, i, dimNames = NULL, incName = NULL, messages = FALSE)
 \item{dimNames}{parameters other than inc and val (such as generation, sex, age when turning dependent)}
 
 \item{incName}{the x in "lx". Most of the time, age. for dependence tables, usually the nb of years since turning dependent}
+
+\item{valName}{lx}
 
 \item{messages}{= FALSE}
 }

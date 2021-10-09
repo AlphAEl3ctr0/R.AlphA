@@ -11,9 +11,8 @@
 # #' @importFrom stats runif
 #' @export
 
-
 get_commut_vars <- function(
-	  popTable
+	popTable
 	, commutTable
 	, commutVars
 	, cle_commut = "age"

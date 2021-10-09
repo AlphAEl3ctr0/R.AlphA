@@ -5,6 +5,7 @@
 #' @param i actualisation rate
 #' @param dimNames parameters other than inc and val (such as generation, sex, age when turning dependent)
 #' @param incName the x in "lx". Most of the time, age. for dependence tables, usually the nb of years since turning dependent
+#' @param valName lx
 #' @param messages = FALSE
 #' @importFrom readr parse_number
 #' @importFrom stringr str_extract str_detect
@@ -21,7 +22,7 @@ Complete_commut <- function(
 	manualrun <- F
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
-		library(data.table)
+		# library(data.table)
 		dimNames	= "dim_.*"
 		incName		= "(inc_.*)|age|x"
 		valName		= "(val_.*)|lx"
@@ -30,8 +31,8 @@ Complete_commut <- function(
 		# lxTable = tbls$lg_maintien_HF ; dimNames = c("x", "sexe") ; incName = "anc"
 		# lxTable = tbls$BT1_prefixed
 		# lxTable = tbls$bigTables$bigTable_200 ; dimNames = c("x", "sexe", "newDimTest") ; incName = "anc"
-		# lxTable = tbls$woPrefixes$TH ;  # voir si on gere les tables classiques automatiquement (sans preciser qui est inc/val)
-		lxTable = tbls$woPrefixes$bigTable_10 ; incName = "anc" ; dimNames = c("x", "sexe", "newDimTest")
+		lxTable = tbls$woPrefixes$TH ;  # voir si on gere les tables classiques automatiquement (sans preciser qui est inc/val)
+		# lxTable = tbls$woPrefixes$bigTable_10 ; incName = "anc" ; dimNames = c("x", "sexe", "newDimTest")
 		messages = T
 		i = 0
 	}
