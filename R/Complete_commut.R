@@ -7,32 +7,31 @@
 #' @param incName the x in "lx". Most of the time, age. for dependence tables, usually the nb of years since turning dependent
 #' @param messages = FALSE
 #' @importFrom readr parse_number
-#' @importFrom stringr str_extract
+#' @importFrom stringr str_extract str_detect
 #' @export
 Complete_commut <- function(
 	lxTable
-	, i # pas de valeur par deft, pour pouvoir engueuler l'utilisateur si non rempli
-	, dimNames = NULL
-	, incName = NULL
-	, messages = FALSE
+	, i = 0 # pas de valeur par deft, pour pouvoir engueuler l'utilisateur si non rempli --> on peut quand meme le faire avec une valeur par defaut
+	, dimNames	= "dim_.*"
+	, incName	= "(inc_.*)|age|x"
+	, valName	= "(val_.*)|lx"
+	, messages	= FALSE
 ){
 	manualrun <- T
 	manualrun <- F
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
 		library(data.table)
+		dimNames	= "dim_.*"
+		incName		= "(inc_.*)|age|x"
+		valName		= "(val_.*)|lx"
 		tbls <- readRDS(list.files("../pop stats/INPUTS", "tabl.*rds", full.names = T))
 		# lxTable = tbls$TE[1:10**4] ; dimNames = NULL # TE : table de survie bien longue (10k lignes)
-		# lxTable = rbind(
-		# 	tbls$TH[1:3][, sexe := "H"]
-		# 	, tbls$TF[1:3][, sexe := "F"]
-		# ) ; dimNames = c("sexe") # pour commencer a bosser sur les multi dimensions
-		# dimNames = c("sexe","lx")
-		# incName = "age"
 		# lxTable = tbls$lg_maintien_HF ; dimNames = c("x", "sexe") ; incName = "anc"
+		# lxTable = tbls$BT1_prefixed
 		# lxTable = tbls$bigTables$bigTable_200 ; dimNames = c("x", "sexe", "newDimTest") ; incName = "anc"
-		# key_vars = c(dimNames, incName)
-		lxTable = tbls$BT1_prefixed
+		# lxTable = tbls$woPrefixes$TH ;  # voir si on gere les tables classiques automatiquement (sans preciser qui est inc/val)
+		lxTable = tbls$woPrefixes$bigTable_10 ; incName = "anc" ; dimNames = c("x", "sexe", "newDimTest")
 		messages = T
 		i = 0
 	}
@@ -41,45 +40,51 @@ Complete_commut <- function(
 	v <- 1/(1+i)
 	# identifier les colonnes de la table : inc / val / dim / autres ----
 		namesTable <- data.table(names = names(tableToFill))
-		namesTable[, find_pattern := stringr::str_extract(names,"^(dim|val|inc)(?=_)")]
+		# namesTable <- rbind(namesTable, data.table(names = "val_lxtestintrus"))
+		# valName <- "val_lx"
+		valName_patterned <- paste0("^","(val_)*", valName,"$")
+		incName_patterned <- paste0("^","(inc_)*", incName,"$")
+		dimNames_patterned <- paste0("^","(dim_)*", dimNames,"$")
+		alldims <- paste(dimNames_patterned, collapse = "|")
+		namesTable[stringr::str_detect(names,valName_patterned), type := "val"]
+		namesTable[stringr::str_detect(names,incName_patterned), type := "inc"]
+		namesTable[stringr::str_detect(names,alldims), type := "dim"]
+		# namesTable[, find_pattern := stringr::str_extract(names,"^(dim|val|inc)(?=_)")]
+
 
 		# value (lx)
-			autoVal <- namesTable[find_pattern == "val"]$names
-			if(length(autoVal)) {
-				if (messages) print(paste0("val column found : ", autoVal))
-				valName <- namesTable[find_pattern == "val"]$names
-			} else {
-				if (messages) print("val column not found : default lx")
-				valName <- "lx"
-			}
-			tableToFill[, lx := get(valName)]
+			valColumn <- namesTable[type == "val"]$names
+			if (length(valColumn) > 1) stop("more than 1 value column found")
+			if (length(valColumn) < 1) stop("no value column found")
+			tableToFill[, lx := get(valColumn)]
 		# increment
-			if (missing(incName)) incName <- namesTable[find_pattern == "inc"]$names
+			incColumn <- namesTable[type == "inc"]$names
+			if (length(incColumn) > 1) stop("more than 1 increment column found")
+			if (length(incColumn) < 1) stop("no increment column found")
+			tableToFill[, inc := readr::parse_number(as.character(get(incColumn)))]
 		# dimensions
-			if (missing(dimNames)) dimNames <- namesTable[find_pattern == "dim"]$names
-
-
-	# retraitements
-		# value
-			tableToFill[is.na(lx), lx := 0] # passe les NA a 0
-		# increment
-			tableToFill[, inc := readr::parse_number(as.character(get(incName)))] # finalement c'est bien oblige de l'avoir en nombre (pour trier)
-		# dimensions
+			dimColumns <- namesTable[type == "dim"]$names
+			# if (missing(dimNames)) dimNames <- namesTable[find_pattern == "dim"]$names
 			separator <- "_"
-			if (is.null(dimNames)) {
+			if (length(dimColumns) == 0) {
 				if (messages) print("no dims used, only inc and value")
 				tableToFill[, dims := ""]
 			} else {
 				if (messages) print(paste0(c("dimNames : ", dimNames), collapse = " - "))
 				tableToFill[
 					, dims := do.call(paste, c(.SD, sep = separator))
-					, .SDcols = dimNames
+					, .SDcols = dimColumns
 					] # verifier avec un vecteur vide
 			}
 
+
+	# retraitements
+		# value
+			tableToFill[is.na(lx), lx := 0] # passe les NA a 0
+
 		# key
 			tableToFill[, key := do.call(paste, c(.SD, sep = separator)), .SDcols = c("dims", "inc")] # TODO: gerer le cas ou il n'y a pas de dims, juste une table normale
-			tableToFill[, key_names := paste(c(dimNames, incName), collapse = separator)]
+			tableToFill[, key_names := paste(c(dimColumns, incName), collapse = separator)]
 
 
 	tableToFill[, inc_p1 := inc+1]
@@ -94,6 +99,7 @@ Complete_commut <- function(
 			, all.x = T
 		)
 
+	# px, qx, Dx
 		tableToFill_lxp1[, px := lxp1 / lx]  			# px
 		tableToFill_lxp1[, qx := 1 - px] 				# qx
 		tableToFill_lxp1[, Dx := lx * v^inc]			# DX
@@ -108,17 +114,16 @@ Complete_commut <- function(
 		]
 		tableToFill_Nx <- tableToFill_lxp1[order(dims, inc)] # a remettre bien apres au niveau des noms
 
-
-	tableToFill_Nx[, a_pp_x := Nx/Dx] 			# äx
-	tableToFill_Nx[, ax := a_pp_x - 1] 			# ax
-	tableToFill_Nx[is.na(tableToFill_Nx)] <- 0
+	# äx et ax
+		tableToFill_Nx[, a_pp_x := Nx/Dx] 			# äx
+		tableToFill_Nx[, ax := a_pp_x - 1] 			# ax
+		tableToFill_Nx[is.na(tableToFill_Nx)] <- 0
 	# remise dans une forme plus pratique / lisible / simple
 		tableToFill_Nx[
 			, `:=` (
 				key_xp1	= NULL
 				, inc_p1	= NULL
 				, lxp1		= NULL
-				, inc		= NULL
 				, dims		= NULL
 			)
 		]
