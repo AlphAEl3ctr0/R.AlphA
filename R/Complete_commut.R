@@ -42,9 +42,9 @@ Complete_commut <- function(
 		namesTable <- data.table(names = names(tableToFill))
 		# namesTable <- rbind(namesTable, data.table(names = "val_lxtestintrus"))
 		# valName <- "val_lx"
-		valName_patterned <- paste0("^","(val_)*", valName,"$")
-		incName_patterned <- paste0("^","(inc_)*", incName,"$")
-		dimNames_patterned <- paste0("^","(dim_)*", dimNames,"$")
+		valName_patterned <- paste0("^(","(val_)*", valName,")$")
+		incName_patterned <- paste0("^(","(inc_)*", incName,")$")
+		dimNames_patterned <- paste0("^(","(dim_)*", dimNames,")$")
 		alldims <- paste(dimNames_patterned, collapse = "|")
 		namesTable[stringr::str_detect(names,valName_patterned), type := "val"]
 		namesTable[stringr::str_detect(names,incName_patterned), type := "inc"]
