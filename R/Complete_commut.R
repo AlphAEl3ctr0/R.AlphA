@@ -84,7 +84,7 @@ Complete_commut <- function(
 
 		# key
 			tableToFill[, key := do.call(paste, c(.SD, sep = separator)), .SDcols = c("dims", "inc")] # TODO: gerer le cas ou il n'y a pas de dims, juste une table normale
-			tableToFill[, key_names := paste(c(dimColumns, incName), collapse = separator)]
+			tableToFill[, key_names := paste(c(dimColumns, incColumn), collapse = separator)]
 
 
 	tableToFill[, inc_p1 := inc+1]
