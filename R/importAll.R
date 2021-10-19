@@ -24,6 +24,7 @@ importAll <- function(
 		path = file.path(workr_root, "Tests_xlsx")
 		pattern = "impall"
 		ignore.case = TRUE
+		importFunction = openxlsx::read.xlsx
 	}
 	filePaths <- data.table(
 		NULL
@@ -33,6 +34,7 @@ importAll <- function(
 
 	# choosing import function depending on extensions
 	if (missing(importFunction)) {
+		if(manualrun) print ("importFunction missing")
 		filePaths[, ext := gsub(".*\\.", "", locPath)]
 		importFunsList <- do.call(rbind,list(NULL
 			, data.table(ext = "xlsx"	, fun = function(x) as.data.table(openxlsx::read.xlsx(x)))
@@ -44,7 +46,17 @@ importAll <- function(
 			, by = "ext"
 		)
 	} else {
-		filePaths$fun <- importFunction
+		if(manualrun) print ("importFunction provided")
+		testnames <- names(filePaths)
+		# filePaths[, .(fun = importFunction), by = .(locPath, fulPath)]
+		filePaths[, cst := T]
+		importFunsList <- do.call(rbind,list(NULL
+			, data.table(cst = T, fun = importFunction)
+		))
+		filePaths <- merge(
+			filePaths, importFunsList
+			, by = "cst"
+		)[, cst := NULL]
 	}
 	if (length(unique(filePaths$fun))>1) message("more than 1 type of file : it is very casse gueule (might face problems with column types)")
 	importsList <- mapply(
