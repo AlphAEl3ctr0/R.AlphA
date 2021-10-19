@@ -1,6 +1,7 @@
 # rm(list = ls())
 #' Long-term care EPV
-#' @description compute Expected Present Value of long-term care annuities, in order to help for PRC (risk-increase provision ?)
+#' @description compute Expected Present Value of long-term care annuities, in
+#'  order to help for PRC (risk-increase provision ?)
 #' @param inputs 3 tables : incidence rate / mortality / dependents mortality
 #' @param i actualisation rate --> not yet
 #' @param detailedRes if FALSE : only returns the table of EPV by age
