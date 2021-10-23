@@ -1,18 +1,18 @@
 #' @title fonction pour importer plusieurs fichiers et les concatener dans une meme table
 #' @description This function imports all files selected, concatenates them in a single table and adds an fName variable
-#' @param importFunction if you know which function you want to use
 #' @param path argument passed to list.fles
 #' @param pattern argument passed to list.fles
 #' @param ignore.case argument passed to list.fles
+#' @param importFunction if you know which function you want to use
 #' @return the concatenated table
 #' @importFrom openxlsx read.xlsx
 #' @export
 
 importAll <- function(
-	importFunction = NULL
-	, path = "."
+	path = "."
 	, pattern = ""
 	, ignore.case = FALSE
+	, importFunction = NULL
 ){
 	manualrun <- T
 	manualrun <- F

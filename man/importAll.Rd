@@ -4,16 +4,16 @@
 \alias{importAll}
 \title{fonction pour importer plusieurs fichiers et les concatener dans une meme table}
 \usage{
-importAll(importFunction = NULL, path = ".", pattern = "", ignore.case = FALSE)
+importAll(path = ".", pattern = "", ignore.case = FALSE, importFunction = NULL)
 }
 \arguments{
-\item{importFunction}{if you know which function you want to use}
-
 \item{path}{argument passed to list.fles}
 
 \item{pattern}{argument passed to list.fles}
 
 \item{ignore.case}{argument passed to list.fles}
+
+\item{importFunction}{if you know which function you want to use}
 }
 \value{
 the concatenated table
