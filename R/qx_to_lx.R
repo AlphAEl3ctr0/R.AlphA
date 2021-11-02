@@ -1,0 +1,47 @@
+#' @title qx to lx
+#' @description given a mortality table with qx, deduce the lx
+#' @param data the table
+#' @param dimsNames should be close to parameters from complete_commut function
+#' @param incName should be close to parameters from complete_commut function
+#' @param qxName default qx. if this not the correct name
+#' @return the lx column
+#' @export
+
+
+qx_to_lx <- function(data, dimsNames, incName, qxName = "qx"){
+	melt_maintien <- copy(data)
+
+	melt_maintien[, retain_order := 1:.N]
+	melt_maintien[, px := 1-get(qxName)]
+	separator = "__"
+	melt_maintien[
+		, dims := do.call(paste, c(.SD, sep = separator))
+		, .SDcols = dimsNames
+		]
+	melt_maintien[, inc := get(incName)]
+	melt_maintien[
+		, key := do.call(paste, c(.SD, sep = separator))
+		, .SDcols = c("dims", "inc")
+		] # TODO: gerer le cas ou il n'y a pas de dims, juste une table normale
+	if (anyDuplicated(melt_maintien$key)) message("!! duplicated key")
+
+	melt_maintien[
+		order(dims, inc)
+		, lxp1 := cumprod(px)
+		, by = .(dims)
+		]
+	melt_maintien[, inc_p1 := inc+1]
+	melt_maintien[, key_xp1 := do.call(paste, c(.SD, sep = separator)), .SDcols = c("dims", "inc_p1")]
+
+	melt_maintien_lx <- merge(
+		melt_maintien
+		, melt_maintien[, .(key_xp1, lx = lxp1)]
+		, by.x = c("key")
+		, by.y = c("key_xp1")
+		, all.x = T
+	)[order(dims, inc)]
+	melt_maintien_lx[inc==min(inc), lx := 1]
+
+	return(melt_maintien_lx[order(retain_order)]$lx)
+
+}
