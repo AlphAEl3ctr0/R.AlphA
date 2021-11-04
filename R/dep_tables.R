@@ -14,7 +14,7 @@ dep_table <- function(
 	inputs # objet contenant les 3 tables d'inputs
 	, detailedRes = F
 	, dim_age_dep_name = "dim_age_dep"
-	, i = 0 # not used yet
+	, i = 0
 ){
 	wk <- list()
 	manualrun <- T
@@ -51,16 +51,19 @@ dep_table <- function(
 		inputs <- tbls$STMultiVar # tables d'input : smallTables - multivars
 		inputs <- tbls$STMult_start50 # tables d'input : ST depart 50 pr lg_maint
 		inputs$lg_maintien <- tbls$lg_maintien; dim_age_dep_name <- "dim_x" # version longue
-		# inputs$lg_maintien <- tbls$bigTables$bigTable_1; dim_age_dep_name <- "dim_x" # version longue et large
+		inputs$lg_maintien <- tbls$bigTables$bigTable_1000; dim_age_dep_name <- "dim_x" # version longue et large
 	}
 
 	wk$inputs <- inputs
+	if (missing(i)) {
+		message("actualisation rate (i) not provided : set to 0 by default")
+	}
 
 	# ajout nbs de commut
 	{
-		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis")
-		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis")
-		lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien)
+		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis", i = i)
+		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis", i = i)
+		lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
 }
 
 	# 1 - lg_maintien : deja ok (+ ce sera plutot lg_all car ttes concernees)
@@ -137,7 +140,7 @@ dep_table <- function(
 	# aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
 	# lg_rente_dep
 	lg_maintien_commuts[1:6]
-	t_pres_commut <- Complete_commut(t_pres, incName = "inc")
+	t_pres_commut <- Complete_commut(t_pres, incName = "inc", i = i)
 	{
 		table(lg_maintien_commuts$inc)
 		{
