@@ -4,12 +4,14 @@
 \alias{dep_table}
 \title{Long-term care EPV}
 \usage{
-dep_table(inputs, detailedRes = T)
+dep_table(inputs, detailedRes = F, dim_age_dep_name = "dim_age_dep", i = 0)
 }
 \arguments{
 \item{inputs}{3 tables : incidence rate / mortality / dependents mortality}
 
 \item{detailedRes}{if FALSE : only returns the table of EPV by age}
+
+\item{dim_age_dep_name}{name of the column giving age when turning dependent}
 
 \item{i}{actualisation rate --> not yet}
 }
