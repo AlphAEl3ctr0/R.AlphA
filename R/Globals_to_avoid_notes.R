@@ -31,6 +31,40 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c(
 	, "dtemax"
 	, "dtemin"
 	, "int_get_commut_key"
+	, "type"
+	, "inc"
+	, "dims"
+	, "key_names"
+	, "inc_p1"
+	, "key_xp1"
+	, "lxp1"
+	, "inc"
+	, "qx_pres"
+	, "qx.x"
+	, "qx.y"
+	, "lx_pres"
+	, "dim_age_dep"
+	, "cst"
+	, "tx"
+	, "p_survie"
+	, "lx_age_vis"
+	, "VAP_dep"
+	, "p_dep"
+	, "dteVision_dec"
+	, "age_vision"
+	, ".variables_table_pop"
+	, "..commutVars"
+	, "result"
+	, "ext"
+	, "locPath"
+	, "cst"
+	, "fName"
+	, "retain_order"
+	, "dims"
+	, "inc"
+	, "lxp1"
+	, "inc_p1"
+	, "key_xp1"
 	))
 
 #
@@ -53,3 +87,51 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c(
 # rdate:             no visible binding for global variable ‘dtemax’
 # rdate:             no visible binding for global variable ‘dtemin’
 # inc_pop:           no visible global function definition for ‘str_c’# celle la reste a voir
+
+
+
+
+# 2021.11.02 : ajout nouvelles vars
+# Complete_commut:     no visible binding for global variable ‘type’
+# Complete_commut:     no visible binding for global variable ‘inc’
+# Complete_commut:     no visible binding for global variable ‘dims’
+# Complete_commut:     no visible binding for global variable ‘key_names’
+# Complete_commut:     no visible binding for global variable ‘inc_p1’
+# Complete_commut:     no visible binding for global variable ‘key_xp1’
+# Complete_commut:     no visible binding for global variable ‘lxp1’
+# dep_table:           no visible binding for global variable ‘inc’
+# dep_table:           no visible binding for global variable ‘qx_pres’
+# dep_table:           no visible binding for global variable ‘qx.x’
+# dep_table:           no visible binding for global variable ‘qx.y’
+# dep_table:           no visible binding for global variable ‘lx_pres’
+# dep_table:           no visible binding for global variable ‘dim_age_dep’
+# dep_table:           no visible binding for global variable ‘cst’
+# dep_table:           no visible binding for global variable ‘tx’
+# dep_table:           no visible binding for global variable ‘p_survie’
+# dep_table:           no visible binding for global variable ‘lx_age_vis’
+# dep_table:           no visible binding for global variable ‘VAP_dep’
+# dep_table:           no visible binding for global variable ‘p_dep’
+# generate_pop:        no visible binding for global variable ‘dteVision_dec’
+# generate_pop:        no visible binding for global variable ‘age_vision’
+# get_commut_vars:     no visible binding for global variable‘..variables_table_pop’
+# get_commut_vars:     no visible binding for global variable ‘..commutVars’
+# get_commut_vars:     no visible binding for global variable ‘result’
+# importAll:           no visible binding for global variable ‘ext’
+# importAll:           no visible binding for global variable ‘locPath’
+# importAll:           no visible binding for global variable ‘cst’
+# importAll :     	:  no visible binding for global variable ‘fName’
+# qx_to_lx:            no visible binding for global variable ‘retain_order’
+# qx_to_lx:            no visible binding for global variable ‘dims’
+# qx_to_lx:            no visible binding for global variable ‘inc’
+# qx_to_lx:            no visible binding for global variable ‘lxp1’
+# qx_to_lx:            no visible binding for global variable ‘inc_p1’
+# qx_to_lx:            no visible binding for global variable ‘key_xp1’
+# importAll :          <anonymous>: no visible binding for global variable ‘fName’
+
+
+
+# Undefined global functions or variables:..commutVars ..variables_table_pop VAP_dep age_vision cst dim_age_dep
+# dims dteVision_dec ext fName inc inc_p1 key_names key_xp1 locPath
+# lx_age_vis lx_pres lxp1 p_dep p_survie qx.x qx.y qx_pres result
+# retain_order tx type
+
