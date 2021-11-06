@@ -36,14 +36,14 @@ dep_table <- function(
 			inputPath <- file.path(workRRoot, "pop stats", "INPUTS") #chemin dossier inputs
 			# popFilesPath <- file.path(root, "fichiers_pop")
 } # paramètres (root)
+		i <- 0
 		# inputs : t_vie / t_inc / lg_maintien
 		{
 			inputs <- list()
 			tbls <- readRDS(file.path(inputPath,"tables.rds"))
-			inputsPRC <- tbls$qalydays
-			inputs$t_vie <- inputsPRC$lg_survie_hors_dep
-			inputs$t_inc <- inputsPRC$incidence
-			inputs$lg_maintien <- inputsPRC$lg_qx_mens_dep
+			inputs$t_vie <- tbls$qalydays$lg_survie_hors_dep
+			inputs$t_inc <- tbls$qalydays$incidence
+			inputs$lg_maintien <- tbls$qalydays$lg_qx_mens_dep ; dim_age_dep_name = "dim_age_dep"
 } # tables d'input : qalydays
 		inputs <- list()
 		tbls <- readRDS(file.path(inputPath,"tables.rds"))
@@ -57,12 +57,15 @@ dep_table <- function(
 	wk$inputs <- inputs
 	if (missing(i)) {
 		message("actualisation rate (i) not provided : set to 0 by default")
+	} else {
+		warning("you provided i : it is not correctly supported yet",
+				"so do not use results.")
 	}
 
 	# ajout nbs de commut
 	{
-		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis", i = i)
-		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis", i = i)
+		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*", i = i)
+		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*", i = i)
 		lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
 }
 
@@ -73,7 +76,7 @@ dep_table <- function(
 		compare_dims <- compareVars(t_inc_commut, t_vie_commut, pattern = "^dim_")
 		# verif : meme largeur ?
 		if (length(compare_dims$exclusive)>0){
-			message("incidence and mortality table have different sets of dimension")
+			warning(call. = T, "incidence and mortality table have different sets of dimension")
 		}
 
 		# gestion de la longueur differente
@@ -93,6 +96,19 @@ dep_table <- function(
 			, by = VarList$common
 			, all=F
 		)
+
+		# Warning if joining is going to loose lines
+		for (testVar in VarList$common) {
+			# testVar <- "dim_sexe"
+			xVals <- unique(t_vie_commut_filter[, get(testVar)])
+			yVals <- unique(t_inc_commut_filter[, get(testVar)])
+			if(length(setdiff(xVals, yVals))) {
+				message("for column : ", testVar)
+				message("some values are not in common ")
+				message("vals t_vie : ", paste(xVals, collapse = ","))
+				message("vals t_inc : ", paste(yVals, collapse = ","))
+			}
+		}
 
 		# test d'un graphique
 		{
@@ -145,22 +161,23 @@ dep_table <- function(
 		table(lg_maintien_commuts$inc)
 		{
 			# on verifie si dim_age_dep est renseigne ou non
-			if (missing(dim_age_dep_name)) {
-				if (!"dim_age_dep" %in% names(lg_maintien_commuts)){
-					message("column dim_age_dep not in lg_maintien :")
-					message("please provide the name for corresponding column")
-				}
-			} else {
-				if (!dim_age_dep_name %in% names(lg_maintien_commuts)){
-					message("column ", dim_age_dep_name, " not in lg_maintien :")
-					message("please provide the name for corresponding column")
+			{
+				if (missing(dim_age_dep_name)) {
+					if (!"dim_age_dep" %in% names(lg_maintien_commuts)){
+						message("column dim_age_dep not in lg_maintien :")
+						message("please provide the name for corresponding column")
+					}
 				} else {
-					# lg_maintien_commuts[, dim_age_dep := get(dim_age_dep_name)] # nop : mieux vaut ne pas dupliquer des colonnes
-					setnames(lg_maintien_commuts, dim_age_dep_name, "dim_age_dep")
-					message("dim_age_dep set to ", dim_age_dep_name)
+					if (!dim_age_dep_name %in% names(lg_maintien_commuts)){
+						message("column ", dim_age_dep_name, " not in lg_maintien :")
+						message("please provide the name for corresponding column")
+					} else {
+						# lg_maintien_commuts[, dim_age_dep := get(dim_age_dep_name)] # nop : mieux vaut ne pas dupliquer des colonnes
+						setnames(lg_maintien_commuts, dim_age_dep_name, "dim_age_dep")
+						message("dim_age_dep set to ", dim_age_dep_name)
+					}
 				}
-			}
-			wk$inputs
+}
 			# pdt cartesien
 			# pour chaque age_vis : liste de tous les age_dep possibles et de l'ax correspondant
 			dimsList_maintien <- compareVars(t_pres, lg_maintien_commuts, "dim_|^inc$")
@@ -209,26 +226,19 @@ dep_table <- function(
 			)[order(age_vis, dim_age_dep)]
 		} # v_precedente : 2 etapes mais 1 seule suffit --> non il faut bien les deux
 
-		{
-		# 	merge_pres_maintien <- merge(
-		# 		t_pres[, .(age_vis, lx_age_vis = lx, cst=T, lx_pres = lx)]
-		# 		, lg_maintien_commuts[
-		# 			readr::parse_number(as.character(inc_anc)) == 0
-		# 			, .(cst = T, a_pp_x, dim_age_dep = dim_age_dep)
-		# 			]
-		# 		, by = "cst"
-		# 		, allow.cartesian = T
-		# 		# , all.x = T
-		# 	)[order(age_vis, dim_age_dep)][, cst := NULL]
-} # version en 1 seule etape : ne fonctionne pas
 
-		# on rajoute la proba de tomber en dep a chaque age_vis
+	# on rajoute la proba de tomber en dep a chaque age_vis
+	# nouvelle version : en cours
+		compare_dims_merge_inc <- compareVars(
+			merge_pres_maintien_lx_age_dep
+			, t_inc_commut
+			, "dim_")
 		merge_pres_maintien_p_dep <- merge(
 			merge_pres_maintien_lx_age_dep
-			, wk$inputs$t_inc[, .(age_vis, p_dep = tx)]	# TODO : gerer les dimensions egalement sur cette partie
-			, by.x = "dim_age_dep"
-			, by.y = "age_vis"
+			, t_inc_commut[, c(.SD, .(dim_age_dep = inc, p_dep = qx)), .SDcols = c(compare_dims_merge_inc$yVars) ]
+			, by = c("dim_age_dep", compare_dims_merge_inc$common)
 		)[order(age_vis, dim_age_dep)] #age dep >= age vis
+		# TODO: gerer aussi la longueur
 
 		merge_pres_maintien_p_dep[, p_survie := lx_pres / lx_age_vis]
 		merge_pres_maintien_p_dep[, VAP_dep := p_dep * a_pp_x * p_survie]
