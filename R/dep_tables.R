@@ -17,8 +17,8 @@ dep_table <- function(
 	, i = 0
 ){
 	wk <- list()
-	manualrun <- T
 	manualrun <- F
+	manualrun <- T
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
 		wk <- list()
@@ -38,6 +38,13 @@ dep_table <- function(
 } # paramètres (root)
 		i <- 0
 		# inputs : t_vie / t_inc / lg_maintien
+		inputs <- list()
+		tbls <- readRDS(file.path(inputPath,"tables.rds"))
+		inputs <- tbls$smallTables  # tables d'input : smallTables
+		inputs <- tbls$STMultiVar # tables d'input : smallTables - multivars
+		inputs$lg_maintien <- tbls$lg_maintien; dim_age_dep_name <- "dim_x" # version longue
+		inputs$lg_maintien <- tbls$bigTables$bigTable_1000; dim_age_dep_name <- "dim_x" # version longue et large
+		inputs <- tbls$STMult_start50 ; dim_age_dep_name = "dim_age_dep" # tables d'input : ST depart 50 pr lg_maint
 		{
 			inputs <- list()
 			tbls <- readRDS(file.path(inputPath,"tables.rds"))
@@ -45,27 +52,21 @@ dep_table <- function(
 			inputs$t_inc <- tbls$qalydays$incidence
 			inputs$lg_maintien <- tbls$qalydays$lg_qx_mens_dep ; dim_age_dep_name = "dim_age_dep"
 } # tables d'input : qalydays
-		inputs <- list()
-		tbls <- readRDS(file.path(inputPath,"tables.rds"))
-		inputs <- tbls$smallTables  # tables d'input : smallTables
-		inputs <- tbls$STMultiVar # tables d'input : smallTables - multivars
-		inputs <- tbls$STMult_start50 # tables d'input : ST depart 50 pr lg_maint
-		inputs$lg_maintien <- tbls$lg_maintien; dim_age_dep_name <- "dim_x" # version longue
-		inputs$lg_maintien <- tbls$bigTables$bigTable_1000; dim_age_dep_name <- "dim_x" # version longue et large
 	}
 
 	wk$inputs <- inputs
 	if (missing(i)) {
 		message("actualisation rate (i) not provided : set to 0 by default")
 	} else {
-		warning("you provided i : it is not correctly supported yet",
+		warning("you provided i : it is not correctly supported yet ",
 				"so do not use results.")
+	};{ # warning about i
 	}
 
-	# ajout nbs de commut
+	# ajout nbs de commut sur toutes les tables
 	{
-		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*", i = i)
-		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*", i = i)
+		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*|age", i = i)
+		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*|age", i = i)
 		lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
 }
 
@@ -73,32 +74,15 @@ dep_table <- function(
 	# 2 - t_pres : lx incluant les P de décès et d'entrée en dep
 	{
 		# Il faut fusionner 2 tables avec largeur ET longueur differentes
-		compare_dims <- compareVars(t_inc_commut, t_vie_commut, pattern = "^dim_")
-		# verif : meme largeur ?
-		if (length(compare_dims$exclusive)>0){
-			warning(call. = T, "incidence and mortality table have different sets of dimension")
-		}
-
-		# gestion de la longueur differente
-		# TODO: ajouter un avertissement si on supprime des lignes
-		commonInc <- intersect(t_vie_commut$inc, t_inc_commut$inc)
-		t_vie_commut_filter <- t_vie_commut[inc %in% commonInc]
-		t_inc_commut_filter <- t_inc_commut[inc %in% commonInc]
-
-
-		# merge sur base des dimensions en commun (+ inc)
-		# On garde quand meme toutes les dimensions (yc les exclusives)
-		# cas ou chaque table a des dimensions exlusives : non etudie
-		VarList <- compareVars(t_vie_commut_filter, t_inc_commut_filter, "dim_|^inc$") # doublon : a simplifier
-		testMerge <- merge(
-			  t_vie_commut_filter[, .SD, .SDcols = c(VarList$xVars, "qx")]
-			, t_inc_commut_filter[, .SD, .SDcols = c(VarList$yVars, "qx")]
-			, by = VarList$common
-			, all=F
-		)
-
-		# Warning if joining is going to loose lines
-		for (testVar in VarList$common) {
+		{
+			# TODO: ajouter un avertissement si on supprime des lignes
+			commonInc <- intersect(t_vie_commut$inc, t_inc_commut$inc)
+			t_vie_commut_filter <- t_vie_commut[inc %in% commonInc]
+			t_inc_commut_filter <- t_inc_commut[inc %in% commonInc]
+} # gestion de la longueur differente
+		dims_vie_inc <- compareVars(t_vie_commut_filter, t_inc_commut_filter, "dim_") # pattern inc viree pour l'ajouter manuellement
+		# verif : les dimensions en commun ont elles les memes valeurs ?
+		for (testVar in dims_vie_inc$common) {
 			# testVar <- "dim_sexe"
 			xVals <- unique(t_vie_commut_filter[, get(testVar)])
 			yVals <- unique(t_inc_commut_filter[, get(testVar)])
@@ -108,49 +92,45 @@ dep_table <- function(
 				message("vals t_vie : ", paste(xVals, collapse = ","))
 				message("vals t_inc : ", paste(yVals, collapse = ","))
 			}
-		}
-
-		# test d'un graphique
-		{
-			# library(ggplot2)
-			# lum_0_100(29)
-			# ggplot2::ggplot(
-			# 	t_inc_commut
-			# 	, aes(inc, qx)
-			# 	# , line_type = dim_type_dep
-			# 	) + geom_line(aes(
-			# 		col = dim_type_dep
-			# 		, line_type = dim_sexe
-			# 	)) + xlim(c(60,90))
-			# [is.na(lx.x) OR is.na(lx.y)]
-			# testMerge[is.na(lx.x)]
-			# testMerge[is.na(lx.y)]
-			# testMerge[!is.na(lx.y)&!is.na(lx.x)]
 }
-		merge_tables <- copy(testMerge)
-		# bug si on a des dimensions : a gerer
-		# Finalement --> a gerer si on n'a pas de dimensions du coup
-		# somme des qx puis calcul du lx correspondant
-		# somme...
-		merge_tables[
-			, qx_pres := rowSums(merge_tables[, .(qx.x, qx.y)], na.rm = T)
-			]
+		# verif : meme largeur ?
+		if (length(dims_vie_inc$exclusive)>0){
+			warning(call. = T
+					, "incidence and mortality table have different sets of dimension"
+					, "\n exclusive cols : "
+					, paste(dims_vie_inc$exclusive, collapse = ","))
+}
 
-		# ...lx
-		dimVars <- setdiff(VarList$all, "inc")
-		merge_tables$lx_pres <- qx_to_lx(
-			merge_tables
-			, dimsNames = dimVars
-			, incName = "inc"
-			, qxName = "qx_pres"
+
+		# merge sur base des dimensions en commun (+ inc)
+		# On garde quand meme toutes les dimensions (yc les exclusives)
+		# cas ou chaque table a des dimensions exlusives : non etudie
+		m_vie_inc <- merge(
+			t_vie_commut_filter[, .SD, .SDcols = c("inc", dims_vie_inc$xVars, "qx")]
+			, t_inc_commut_filter[, .SD, .SDcols = c("inc", dims_vie_inc$yVars, "qx")]
+			, by = c("inc",dims_vie_inc$common)
+			, all=F
 		)
 
+		# bug si on a des dimensions : a gerer
+		# Finalement --> a gerer si on n'a pas de dimensions du coup
+		{
+			# somme des qx puis calcul du lx correspondant
+			# somme...
+			m_vie_inc[
+				, qx_pres := rowSums(m_vie_inc[, .(qx.x, qx.y)], na.rm = T)
+				]
 
-		# merge_tables[
-		# 	, dims := do.call(paste, .SD)
-		# 	, .SDcols = c(setdiff(VarList$all, "inc"))
-		# 	]
-		t_pres <- merge_tables[, .(lx = lx_pres), by = eval(VarList$all)]
+			# ...lx
+			m_vie_inc$lx_pres <- qx_to_lx(
+				m_vie_inc
+				, dimsNames = dims_vie_inc$all
+				, incName = "inc"
+				, qxName = "qx_pres"
+			)
+} # somme des qx puis reconstitution lx
+
+		t_pres <- m_vie_inc[, .(lx = lx_pres), by = c("inc",dims_vie_inc$all)]
 } # fin 2 - t_pres
 	# Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
 	# aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
@@ -258,32 +238,6 @@ dep_table <- function(
 	if (detailedRes) return(wk) else return(wk$results$t_VAP_gie_dep)
 
 }
-
-
-# quelques tests... ------------------------------------------------------------
-{
-	library(R.AlphA)
-	library(data.table)
-
-	root <- dirname(rstudioapi::getSourceEditorContext()$path)
-	workRRoot <- stringr::str_extract(root, ".*WorkR")
-	tbls <- readRDS(file.path(workRRoot, "pop stats", "INPUTS","tables.rds"))
-
-	compareVars(tbls$STMultiVar, tbls$smallTables)
-	assumptions <- list()
-	assumptions <- tbls$smallTables # Small Tables, simple
-	assumptions <- tbls$STMultiVar # Small Tables, multiVars
-	assumptions <- tbls$STMult_start50 # Small Tables, simple
-	assumptions$lg_maintien <- tbls$lg_maintien
-	assumptions$lg_maintien <- tbls$bigTables$bigTable_1000 # Big Tables
-	assumptions$lg_maintien <- tbls$bigTables$bigTable_200 # Big Tables
-} # tables d'input
-test <- dep_table(assumptions)
-test <- dep_table(assumptions, dim_age_dep_name = "dim_x")
-test <- dep_table(assumptions, dim_age_dep_name = "dim_x", detailedRes = T)
-test <- dep_table(assumptions, detailedRes = T)
-test$results$t_VAP_gie_dep
-# test$results$lg_rente_dep
 
 
 #TODO :

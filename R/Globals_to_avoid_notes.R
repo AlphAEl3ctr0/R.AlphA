@@ -65,6 +65,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c(
 	, "lxp1"
 	, "inc_p1"
 	, "key_xp1"
+	, "..variables_table_pop"
 	))
 
 #
