@@ -17,8 +17,8 @@ dep_table <- function(
 	, i = 0
 ){
 	wk <- list()
-	manualrun <- F
 	manualrun <- T
+	manualrun <- F
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
 		wk <- list()
@@ -52,12 +52,23 @@ dep_table <- function(
 			inputs$t_inc <- tbls$qalydays$incidence
 			inputs$lg_maintien <- tbls$qalydays$lg_qx_mens_dep ; dim_age_dep_name = "dim_age_dep"
 } # tables d'input : qalydays
+		names(tbls$bigTables$bigTable_1)
+	};{
 	}
 
 	wk$inputs <- inputs
+	if(is.null(wk$inputs$t_res)){
+		print("no t_res")
+		cst_res_rate <- 10/100
+		wk$inputs$t_res <- data.table(
+			inc_anc = 1:10
+			, lx = 10*(1-cst_res_rate)^(1:10)
+		)
+	}
+
 	if (missing(i)) {
 		message("actualisation rate (i) not provided : set to 0 by default")
-	} else {
+	} else if (i>0) {
 		warning("you provided i : it is not correctly supported yet ",
 				"so do not use results.")
 	};{ # warning about i
@@ -67,11 +78,12 @@ dep_table <- function(
 	{
 		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*|age", i = i)
 		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*|age", i = i)
+		t_res_commut <- Complete_commut(wk$inputs$t_res, incName = "age_vis|inc_.*|age", i = i)
 		lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
 }
 
 	# 1 - lg_maintien : deja ok (+ ce sera plutot lg_all car ttes concernees)
-	# 2 - t_pres : lx incluant les P de décès et d'entrée en dep
+	# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil
 	{
 		# Il faut fusionner 2 tables avec largeur ET longueur differentes
 		{
@@ -106,31 +118,46 @@ dep_table <- function(
 		# On garde quand meme toutes les dimensions (yc les exclusives)
 		# cas ou chaque table a des dimensions exlusives : non etudie
 		m_vie_inc <- merge(
-			t_vie_commut_filter[, .SD, .SDcols = c("inc", dims_vie_inc$xVars, "qx")]
-			, t_inc_commut_filter[, .SD, .SDcols = c("inc", dims_vie_inc$yVars, "qx")]
+			t_vie_commut_filter[, c(.SD, .(qx_vie = qx)), .SDcols = c("inc", dims_vie_inc$xVars)]
+			, t_inc_commut_filter[, c(.SD, .(qx_inc = qx)), .SDcols = c("inc", dims_vie_inc$yVars)]
 			, by = c("inc",dims_vie_inc$common)
 			, all=F
 		)
 
+		# ajout des resiliations
+		# longueur : non geree, on fait toujours un produit cartesien
+		setnames(t_res_commut, "inc_anc", "dim_anc")
+		dimsVIR <- compareVars(m_vie_inc, t_res_commut, "dim")
+		qxVIR <- compareVars(m_vie_inc, t_res_commut, "qx")
+		m_VIR <- merge(
+			m_vie_inc[, c(.SD, .(cst = T)), .SDcols = c(dimsVIR$xVars, qxVIR$xVars, "inc")]
+			, t_res_commut[, c(.SD, .(cst = T, qx_res = qx)), .SDcols = c(dimsVIR$yVars)] # anc est une inc dans la table de resil, mais une dim dans la table mergee
+			, by = c("cst", dimsVIR$common)
+			, allow.cartesian = T
+		)
+
+
+		m_VIR
+		m_pres <- copy(m_VIR)
 		# bug si on a des dimensions : a gerer
 		# Finalement --> a gerer si on n'a pas de dimensions du coup
 		{
 			# somme des qx puis calcul du lx correspondant
 			# somme...
-			m_vie_inc[
-				, qx_pres := rowSums(m_vie_inc[, .(qx.x, qx.y)], na.rm = T)
-				]
+			qxNames <- grep("^qx_", names(m_pres), value = T)
+			m_pres[, qx_pres := rowSums(.SD, na.rm = T), .SDcols = qxNames ]
 
 			# ...lx
-			m_vie_inc$lx_pres <- qx_to_lx(
-				m_vie_inc
-				, dimsNames = dims_vie_inc$all
+			m_pres$lx_pres <- qx_to_lx(
+				m_pres
+				, dimsNames = c(dimsVIR$all, "dim_anc") # il reste un gros travail de generalisation a faire
 				, incName = "inc"
 				, qxName = "qx_pres"
 			)
 } # somme des qx puis reconstitution lx
 
-		t_pres <- m_vie_inc[, .(lx = lx_pres), by = c("inc",dims_vie_inc$all)]
+
+		t_pres <- m_pres[, .(lx = lx_pres), by = c("inc",dimsVIR$all)] # attention il reste des bugs sur les dernieres lignes de la table
 } # fin 2 - t_pres
 	# Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
 	# aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
