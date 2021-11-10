@@ -17,12 +17,14 @@ dep_table <- function(
 	, i = 0
 ){
 	wk <- list()
+	wk$timer <- timer(start = T)
 	manualrun <- T
 	manualrun <- F
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
-		wk <- list()
+		# wk <- list()
 		# library(data.table)
+		# library(R.AlphA)
 		# library(stringr)
 		detailedRes = T
 		{
@@ -55,6 +57,7 @@ dep_table <- function(
 		names(tbls$bigTables$bigTable_1)
 	};{
 	}
+	wk$timer <- timer(wk$timer, step = "startfun")
 
 	wk$inputs <- inputs
 	if(is.null(wk$inputs$t_res)){
@@ -76,11 +79,14 @@ dep_table <- function(
 
 	# ajout nbs de commut sur toutes les tables
 	{
+		wk$timer <- timer(wk$timer, step = "start adding commuts")
 		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*|age", i = i)
 		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*|age", i = i)
 		t_res_commut <- Complete_commut(wk$inputs$t_res, incName = "age_vis|inc_.*|age", i = i)
 		lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
-}
+	} ;{
+		wk$timer <- timer(wk$timer, step = "commuts OK")
+	}
 
 	# 1 - lg_maintien : deja ok (+ ce sera plutot lg_all car ttes concernees)
 	# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil
@@ -91,7 +97,9 @@ dep_table <- function(
 			commonInc <- intersect(t_vie_commut$inc, t_inc_commut$inc)
 			t_vie_commut_filter <- t_vie_commut[inc %in% commonInc]
 			t_inc_commut_filter <- t_inc_commut[inc %in% commonInc]
-} # gestion de la longueur differente
+} ; {
+			wk$timer <- timer(wk$timer, step = "length OK") # (gestion de la longueur differente)
+		}
 		dims_vie_inc <- compareVars(t_vie_commut_filter, t_inc_commut_filter, "dim_") # pattern inc viree pour l'ajouter manuellement
 		# verif : les dimensions en commun ont elles les memes valeurs ?
 		for (testVar in dims_vie_inc$common) {
@@ -117,12 +125,14 @@ dep_table <- function(
 		# merge sur base des dimensions en commun (+ inc)
 		# On garde quand meme toutes les dimensions (yc les exclusives)
 		# cas ou chaque table a des dimensions exlusives : non etudie
+		wk$timer <- timer(wk$timer, step = "start merging vie_inc")
 		m_vie_inc <- merge(
 			t_vie_commut_filter[, c(.SD, .(qx_vie = qx)), .SDcols = c("inc", dims_vie_inc$xVars)]
 			, t_inc_commut_filter[, c(.SD, .(qx_inc = qx)), .SDcols = c("inc", dims_vie_inc$yVars)]
 			, by = c("inc",dims_vie_inc$common)
 			, all=F
 		)
+		wk$timer <- timer(wk$timer, step = "m_vie_inc OK")
 
 		# ajout des resiliations
 		# longueur : non geree, on fait toujours un produit cartesien
@@ -135,10 +145,10 @@ dep_table <- function(
 			, by = c("cst", dimsVIR$common)
 			, allow.cartesian = T
 		)
+		wk$timer <- timer(wk$timer, step = "m_VIR OK")
 
 
-		m_VIR
-		m_pres <- copy(m_VIR)
+		m_pres <- copy(m_VIR) # vu la taille, p-e pas une bonne idee
 		# bug si on a des dimensions : a gerer
 		# Finalement --> a gerer si on n'a pas de dimensions du coup
 		{
@@ -155,6 +165,7 @@ dep_table <- function(
 				, qxName = "qx_pres"
 			)
 } # somme des qx puis reconstitution lx
+		wk$timer <- timer(wk$timer, step = "m_pres OK")
 
 
 		t_pres <- m_pres[, .(lx = lx_pres), by = c("inc",dimsVIR$all)] # attention il reste des bugs sur les dernieres lignes de la table
@@ -164,8 +175,10 @@ dep_table <- function(
 	# lg_rente_dep
 	lg_maintien_commuts[1:6]
 	t_pres_commut <- Complete_commut(t_pres, incName = "inc", i = i)
+	wk$timer <- timer(wk$timer, step = "t_pres_commut OK")
 	{
 		table(lg_maintien_commuts$inc)
+		wk$timer <- timer(wk$timer, step = "table lg maintien OK (a virer mais juste pour voir)")
 		{
 			# on verifie si dim_age_dep est renseigne ou non
 			{
@@ -199,6 +212,7 @@ dep_table <- function(
 				]
 
 
+			wk$timer <- timer(wk$timer, step = "starting merge pres maintien")
 			merge_pres_maintien <- merge(
 				t_pres[
 					, c(.SD, .(cst = T, age_vis = inc, lx_age_vis = lx))
@@ -209,6 +223,7 @@ dep_table <- function(
 				, all=F
 				, allow.cartesian = T
 			)[order(age_vis, dim_age_dep)][, cst := NULL] # TODO: dim_age_dep a generaliser
+			wk$timer <- timer(wk$timer, step = "merge pres maintien OK")
 
 			dimsList_maintien$all
 			# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
@@ -225,12 +240,14 @@ dep_table <- function(
 				, c(.SD, .(lx_pres = lx, age_vis = inc))
 				, .SDcols = dimList_merge$yVars
 				]
+			wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep")
 			merge_pres_maintien_lx_age_dep <- merge(
 				x = merge_pres_maintien
 				, y = interm_t_pres
 				, by.x = c("dim_age_dep", dimList_merge$common)
 				, by.y = c("age_vis", dimList_merge$common)
 			)[order(age_vis, dim_age_dep)]
+			wk$timer <- timer(wk$timer, step = "m_pres_maint_lx_age_dep OK")
 		} # v_precedente : 2 etapes mais 1 seule suffit --> non il faut bien les deux
 
 
@@ -246,6 +263,7 @@ dep_table <- function(
 			, by = c("dim_age_dep", compare_dims_merge_inc$common)
 		)[order(age_vis, dim_age_dep)] #age dep >= age vis
 		# TODO: gerer aussi la longueur
+		wk$timer <- timer(wk$timer, step = "m_pres_maintien_p_dep OK")
 
 		merge_pres_maintien_p_dep[, p_survie := lx_pres / lx_age_vis]
 		merge_pres_maintien_p_dep[, VAP_dep := p_dep * a_pp_x * p_survie]
@@ -262,6 +280,7 @@ dep_table <- function(
 		, by = c("age_vis", res_dimsButAge)
 	]
 
+	wk$timer <- timer(wk$timer, step = "all OK")
 	if (detailedRes) return(wk) else return(wk$results$t_VAP_gie_dep)
 
 }
