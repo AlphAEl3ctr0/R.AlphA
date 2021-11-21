@@ -4,7 +4,7 @@
 \alias{qx_to_lx}
 \title{qx to lx}
 \usage{
-qx_to_lx(data, dimsNames, incName, qxName = "qx")
+qx_to_lx(data, dimsNames = NULL, incName, qxName = "qx")
 }
 \arguments{
 \item{data}{the table}
