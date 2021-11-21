@@ -140,9 +140,9 @@ dep_table <- function(
 			wk$timer <- timer(wk$timer, step = "start merging vie_inc")
 			m_vie_inc <- merge(
 				 all=F
-				, x = t_vie_commut_filter[, c(.SD, .(qx_vie = qx)), .SDcols = c("inc", dims_vie_inc$xVars)]
-				, y = t_inc_commut_filter[, c(.SD, .(qx_inc = qx)), .SDcols = c("inc", dims_vie_inc$yVars)]
-				, by = c("inc",dims_vie_inc$common)
+				, x = t_vie_commut_filter[, c(.SD, .(qx_vie = qx, age = inc)), .SDcols = c(dims_vie_inc$xVars)]
+				, y = t_inc_commut_filter[, c(.SD, .(qx_inc = qx, age = inc)), .SDcols = c(dims_vie_inc$yVars)]
+				, by = c("age",dims_vie_inc$common)
 			)
 			wk$timer <- timer(wk$timer, step = "m_vie_inc OK")
 } # fin 2.1
@@ -151,15 +151,16 @@ dep_table <- function(
 			# ajout des resiliations
 			# TODO : verifier que l'on prend bien en compte une chronique de taux de resils et non juste un seul taux
 			# longueur : non geree, on fait toujours un produit cartesien
-			setnames(t_res_commut, "inc_anc", "dim_anc") # anc est une inc dans la table de resil, mais une dim dans la table mergee
+			setnames(t_res_commut, "inc_anc", "anc") # anc est une inc dans la table de resil, mais une dim dans la table mergee
 			dimsVIR <- compareVars(m_vie_inc, t_res_commut, "dim")
 			qxVIR <- compareVars(m_vie_inc, t_res_commut, "qx") # all qx vars
 			m_VIR <- merge(
 				by = c("cst", dimsVIR$common)
-				, m_vie_inc[, c(.SD, .(cst = T)), .SDcols = c(dimsVIR$xVars, qxVIR$xVars, "inc")]
-				, t_res_commut[, c(.SD, .(cst = T, qx_res = qx)), .SDcols = c(dimsVIR$yVars)]
+				, m_vie_inc[, c(.SD, .(cst = T)), .SDcols = c(dimsVIR$xVars, qxVIR$xVars, "age")]
+				, t_res_commut[, c(.SD, .(cst = T, qx_res = qx)), .SDcols = c("anc",dimsVIR$yVars)]
 				, allow.cartesian = T
 			)
+			m_VIR[, dim_age_sous := age - anc]
 			wk$timer <- timer(wk$timer, step = "m_VIR OK")
 } # fin 2.2
 		m_pres <- copy(m_VIR) # vu la taille, p-e pas une bonne idee
@@ -175,20 +176,20 @@ dep_table <- function(
 			# ...lx
 			m_pres$lx_pres <- qx_to_lx(
 				m_pres
-				, dimsNames = c(dimsVIR$all, "dim_anc") # il reste un gros travail de generalisation a faire
-				, incName = "inc"
+				, dimsNames = c(dimsVIR$all, "dim_age_sous") # il reste un gros travail de generalisation a faire
+				, incName = "anc"
 				, qxName = "qx_pres"
 			)
 } # somme des qx puis reconstitution lx
 
 		wk$timer <- timer(wk$timer, step = "m_pres OK")
-		wk$interm$t_pres <- m_pres[, .(lx = lx_pres), by = c("inc",dimsVIR$all)] # attention il reste des bugs sur les dernieres lignes de la table
+		wk$interm$t_pres <- m_pres[, .(lx = lx_pres, dim_age_sous), by = c("anc", "age",dimsVIR$all)] # attention il reste des bugs sur les dernieres lignes de la table
 } # fin 2 - t_pres
 	# Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
 	# aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
 	# 3 - lg_rente_dep ----
 	lg_maintien_commuts[1:6]
-	t_pres_commut <- Complete_commut(wk$interm$t_pres, incName = "inc", i = i)
+	t_pres_commut <- Complete_commut(wk$interm$t_pres, incName = "age", i = i)
 	wk$timer <- timer(wk$timer, step = "t_pres_commut OK")
 	{
 		table(lg_maintien_commuts$inc)
