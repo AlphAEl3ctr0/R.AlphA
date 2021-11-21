@@ -42,11 +42,9 @@ dep_table <- function(
 		# inputs : t_vie / t_inc / lg_maintien
 		inputs <- list()
 		tbls <- readRDS(file.path(inputPath,"tables.rds"))
-		inputs <- tbls$smallTables  # tables d'input : smallTables
 		inputs <- tbls$STMultiVar # tables d'input : smallTables - multivars
 		inputs$lg_maintien <- tbls$lg_maintien; dim_age_dep_name <- "dim_x" # version longue
 		inputs$lg_maintien <- tbls$bigTables$bigTable_1000; dim_age_dep_name <- "dim_x" # version longue et large
-		inputs <- tbls$STMult_start50 ; dim_age_dep_name = "dim_age_dep" # tables d'input : ST depart 50 pr lg_maint
 		{
 			inputs <- list()
 			tbls <- readRDS(file.path(inputPath,"tables.rds"))
@@ -54,19 +52,23 @@ dep_table <- function(
 			inputs$t_inc <- tbls$qalydays$incidence
 			inputs$lg_maintien <- tbls$qalydays$lg_qx_mens_dep ; dim_age_dep_name = "dim_age_dep"
 } # tables d'input : qalydays
-		names(tbls$bigTables$bigTable_1)
+		inputs <- tbls$STMult_start50 ; dim_age_dep_name = "dim_age_dep" # tables d'input : ST depart 50 pr lg_maint
+		inputs <- tbls$smallTables; dim_age_dep_name = "dim_age_dep"   # tables d'input : smallTables
+		# names(tbls$bigTables$bigTable_1)
 	};{
 	}
 	wk$timer <- timer(wk$timer, step = "startfun")
-
+	# 1 - inputs / ajout commuts ---------------------------------
 	wk$inputs <- inputs
 	if(is.null(wk$inputs$t_res)){
 		print("no t_res")
-		cst_res_rate <- 10/100
-		wk$inputs$t_res <- data.table(
-			inc_anc = 1:10
-			, lx = 10*(1-cst_res_rate)^(1:10)
+		res_rates <- seq(from = 0.12, to = 0.03, length.out = 10)
+		t_res <- data.table(
+			inc_anc = 1:4
+			, res_rates = seq(from = 0.12, to = 0.03, length.out = 4)
 		)
+		t_res$lx <- qx_to_lx(t_res, incName = "inc_anc", qxName = "res_rates")
+		wk$inputs$t_res <- t_res[, .(inc_anc, lx)]
 	}
 
 	if (missing(i)) {
@@ -88,8 +90,7 @@ dep_table <- function(
 		wk$timer <- timer(wk$timer, step = "commuts OK")
 	}
 
-	# 1 - lg_maintien : deja ok (+ ce sera plutot lg_all car ttes concernees)
-	# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil
+	# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil ----
 	{
 		# Il faut fusionner 2 tables avec largeur ET longueur differentes
 		{
@@ -102,7 +103,7 @@ dep_table <- function(
 		}
 		dims_vie_inc <- compareVars(t_vie_commut_filter, t_inc_commut_filter, "dim_") # pattern inc viree pour l'ajouter manuellement
 		# verif : les dimensions en commun ont elles les memes valeurs ?
-		for (testVar in dims_vie_inc$common) {
+		for (testVar in dims_vie_inc$common){
 			# testVar <- "dim_sexe"
 			xVals <- unique(t_vie_commut_filter[, get(testVar)])
 			yVals <- unique(t_inc_commut_filter[, get(testVar)])
@@ -111,6 +112,14 @@ dep_table <- function(
 				message("some values are not in common ")
 				message("vals t_vie : ", paste(xVals, collapse = ","))
 				message("vals t_inc : ", paste(yVals, collapse = ","))
+				message(
+					"values not in common : "
+					, paste(
+						collapse = ","
+						, setdiff(xVals, yVals)
+						, setdiff(yVals, xVals)
+					) # attention bug, a revoir
+				)
 			}
 }
 		# verif : meme largeur ?
@@ -125,33 +134,39 @@ dep_table <- function(
 		# merge sur base des dimensions en commun (+ inc)
 		# On garde quand meme toutes les dimensions (yc les exclusives)
 		# cas ou chaque table a des dimensions exlusives : non etudie
-		wk$timer <- timer(wk$timer, step = "start merging vie_inc")
-		m_vie_inc <- merge(
-			t_vie_commut_filter[, c(.SD, .(qx_vie = qx)), .SDcols = c("inc", dims_vie_inc$xVars)]
-			, t_inc_commut_filter[, c(.SD, .(qx_inc = qx)), .SDcols = c("inc", dims_vie_inc$yVars)]
-			, by = c("inc",dims_vie_inc$common)
-			, all=F
-		)
-		wk$timer <- timer(wk$timer, step = "m_vie_inc OK")
 
-		# ajout des resiliations
-		# longueur : non geree, on fait toujours un produit cartesien
-		setnames(t_res_commut, "inc_anc", "dim_anc")
-		dimsVIR <- compareVars(m_vie_inc, t_res_commut, "dim")
-		qxVIR <- compareVars(m_vie_inc, t_res_commut, "qx")
-		m_VIR <- merge(
-			m_vie_inc[, c(.SD, .(cst = T)), .SDcols = c(dimsVIR$xVars, qxVIR$xVars, "inc")]
-			, t_res_commut[, c(.SD, .(cst = T, qx_res = qx)), .SDcols = c(dimsVIR$yVars)] # anc est une inc dans la table de resil, mais une dim dans la table mergee
-			, by = c("cst", dimsVIR$common)
-			, allow.cartesian = T
-		)
-		wk$timer <- timer(wk$timer, step = "m_VIR OK")
-
-
-		m_pres <- copy(m_VIR) # vu la taille, p-e pas une bonne idee
-		# bug si on a des dimensions : a gerer
-		# Finalement --> a gerer si on n'a pas de dimensions du coup
+		# _2.1 - m_vie_inc ----
 		{
+			wk$timer <- timer(wk$timer, step = "start merging vie_inc")
+			m_vie_inc <- merge(
+				 all=F
+				, x = t_vie_commut_filter[, c(.SD, .(qx_vie = qx)), .SDcols = c("inc", dims_vie_inc$xVars)]
+				, y = t_inc_commut_filter[, c(.SD, .(qx_inc = qx)), .SDcols = c("inc", dims_vie_inc$yVars)]
+				, by = c("inc",dims_vie_inc$common)
+			)
+			wk$timer <- timer(wk$timer, step = "m_vie_inc OK")
+} # fin 2.1
+		# _2.2 - m_vie_inc_resils ----
+		{
+			# ajout des resiliations
+			# TODO : verifier que l'on prend bien en compte une chronique de taux de resils et non juste un seul taux
+			# longueur : non geree, on fait toujours un produit cartesien
+			setnames(t_res_commut, "inc_anc", "dim_anc") # anc est une inc dans la table de resil, mais une dim dans la table mergee
+			dimsVIR <- compareVars(m_vie_inc, t_res_commut, "dim")
+			qxVIR <- compareVars(m_vie_inc, t_res_commut, "qx") # all qx vars
+			m_VIR <- merge(
+				by = c("cst", dimsVIR$common)
+				, m_vie_inc[, c(.SD, .(cst = T)), .SDcols = c(dimsVIR$xVars, qxVIR$xVars, "inc")]
+				, t_res_commut[, c(.SD, .(cst = T, qx_res = qx)), .SDcols = c(dimsVIR$yVars)]
+				, allow.cartesian = T
+			)
+			wk$timer <- timer(wk$timer, step = "m_VIR OK")
+} # fin 2.2
+		m_pres <- copy(m_VIR) # vu la taille, p-e pas une bonne idee
+		# _2.3 - calcul somme des qx ----
+		{
+			# bug si on a des dimensions : a gerer
+			# Finalement --> a gerer si on n'a pas de dimensions du coup
 			# somme des qx puis calcul du lx correspondant
 			# somme...
 			qxNames <- grep("^qx_", names(m_pres), value = T)
@@ -165,90 +180,89 @@ dep_table <- function(
 				, qxName = "qx_pres"
 			)
 } # somme des qx puis reconstitution lx
+
 		wk$timer <- timer(wk$timer, step = "m_pres OK")
-
-
-		t_pres <- m_pres[, .(lx = lx_pres), by = c("inc",dimsVIR$all)] # attention il reste des bugs sur les dernieres lignes de la table
+		wk$interm$t_pres <- m_pres[, .(lx = lx_pres), by = c("inc",dimsVIR$all)] # attention il reste des bugs sur les dernieres lignes de la table
 } # fin 2 - t_pres
 	# Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
 	# aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
-	# lg_rente_dep
+	# 3 - lg_rente_dep ----
 	lg_maintien_commuts[1:6]
-	t_pres_commut <- Complete_commut(t_pres, incName = "inc", i = i)
+	t_pres_commut <- Complete_commut(wk$interm$t_pres, incName = "inc", i = i)
 	wk$timer <- timer(wk$timer, step = "t_pres_commut OK")
 	{
 		table(lg_maintien_commuts$inc)
 		wk$timer <- timer(wk$timer, step = "table lg maintien OK (a virer mais juste pour voir)")
+
+
+		# on verifie si dim_age_dep est renseigne ou non
 		{
-			# on verifie si dim_age_dep est renseigne ou non
-			{
-				if (missing(dim_age_dep_name)) {
-					if (!"dim_age_dep" %in% names(lg_maintien_commuts)){
-						message("column dim_age_dep not in lg_maintien :")
-						message("please provide the name for corresponding column")
-					}
-				} else {
-					if (!dim_age_dep_name %in% names(lg_maintien_commuts)){
-						message("column ", dim_age_dep_name, " not in lg_maintien :")
-						message("please provide the name for corresponding column")
-					} else {
-						# lg_maintien_commuts[, dim_age_dep := get(dim_age_dep_name)] # nop : mieux vaut ne pas dupliquer des colonnes
-						setnames(lg_maintien_commuts, dim_age_dep_name, "dim_age_dep")
-						message("dim_age_dep set to ", dim_age_dep_name)
-					}
+			if (missing(dim_age_dep_name)) {
+				if (!"dim_age_dep" %in% names(lg_maintien_commuts)){
+					message("column dim_age_dep not in lg_maintien :")
+					message("please provide the name for corresponding column")
 				}
-}
-			# pdt cartesien
-			# pour chaque age_vis : liste de tous les age_dep possibles et de l'ax correspondant
-			dimsList_maintien <- compareVars(t_pres, lg_maintien_commuts, "dim_|^inc$")
-			dimsList_maintien <- compareVars(t_pres, lg_maintien_commuts, "dim_")
+			} else {
+				if (!dim_age_dep_name %in% names(lg_maintien_commuts)){
+					message("column ", dim_age_dep_name, " not in lg_maintien :")
+					message("please provide an existing name for the dim_age_dep column")
+				} else {
+					# lg_maintien_commuts[, dim_age_dep := get(dim_age_dep_name)] # nop : mieux vaut ne pas dupliquer des colonnes
+					setnames(lg_maintien_commuts, dim_age_dep_name, "dim_age_dep")
+					message("dim_age_dep set to ", dim_age_dep_name)
+				}
+			}
+		}
+		# pdt cartesien
+		# pour chaque age_vis : liste de tous les age_dep possibles et de l'ax correspondant
+		dimsList_maintien <- compareVars(wk$interm$t_pres, lg_maintien_commuts, "dim_|^inc$")
+		dimsList_maintien <- compareVars(wk$interm$t_pres, lg_maintien_commuts, "dim_")
 
-			# d'abord : ax pour chaque age_dep. On va considerer que dim_age_dep
-			# est obligatoire pour l'instant
-			interm_t_ax <- lg_maintien_commuts[
-				readr::parse_number(as.character(inc))==0
-				, c(.SD, .(cst = T))
-				, .SDcols = c(dimsList_maintien$yVars, "a_pp_x")
+		# d'abord : ax pour chaque age_dep. On va considerer que dim_age_dep
+		# est obligatoire pour l'instant
+		wk$interm$t_ax <- lg_maintien_commuts[
+			readr::parse_number(as.character(inc))==0
+			, c(.SD, .(cst = T))
+			, .SDcols = c(dimsList_maintien$yVars, "a_pp_x")
+			]
+
+
+		wk$timer <- timer(wk$timer, step = "starting merge pres maintien")
+		merge_pres_maintien <- merge(
+			wk$interm$t_pres[
+				, c(.SD, .(cst = T, age_vis = inc, lx_age_vis = lx))
+				, .SDcols = c(dimsList_maintien$xVars)
 				]
+			, wk$interm$t_ax
+			, by = c("cst", setdiff(dimsList_maintien$common, "inc"))
+			, all=F
+			, allow.cartesian = T
+		)[order(age_vis, dim_age_dep)][, cst := NULL] # TODO: dim_age_dep a generaliser
+		wk$timer <- timer(wk$timer, step = "merge pres maintien OK")
 
-
-			wk$timer <- timer(wk$timer, step = "starting merge pres maintien")
-			merge_pres_maintien <- merge(
-				t_pres[
-					, c(.SD, .(cst = T, age_vis = inc, lx_age_vis = lx))
-					, .SDcols = c(dimsList_maintien$xVars)
-					]
-				, interm_t_ax
-				, by = c("cst", setdiff(dimsList_maintien$common, "inc"))
-				, all=F
-				, allow.cartesian = T
-			)[order(age_vis, dim_age_dep)][, cst := NULL] # TODO: dim_age_dep a generaliser
-			wk$timer <- timer(wk$timer, step = "merge pres maintien OK")
-
-			dimsList_maintien$all
-			# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
-			# du coup dim_age_dep, age_vis sont a peu pres obligatoires
-			dimList_merge <- compareVars(merge_pres_maintien, t_pres, "dim_")
-			# merge_pres_maintien[dim_age_dep>=age_vis] # plus tard : filtrer pour efficacité
-			dimList_merge$all
-			# on re-merge pour avoir le lx de l'age_dep et non de l'age vis
-			# pour t_pres il faut
-			# info : lx_pres
-			# cle : age_vis (avec age_dep), + dims
-			dimsButAge <- setdiff(dimList_merge$xVars, "dim_age_dep")
-			interm_t_pres <- t_pres[
-				, c(.SD, .(lx_pres = lx, age_vis = inc))
-				, .SDcols = dimList_merge$yVars
-				]
-			wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep")
-			merge_pres_maintien_lx_age_dep <- merge(
-				x = merge_pres_maintien
-				, y = interm_t_pres
-				, by.x = c("dim_age_dep", dimList_merge$common)
-				, by.y = c("age_vis", dimList_merge$common)
-			)[order(age_vis, dim_age_dep)]
-			wk$timer <- timer(wk$timer, step = "m_pres_maint_lx_age_dep OK")
-		} # v_precedente : 2 etapes mais 1 seule suffit --> non il faut bien les deux
+		dimsList_maintien$all
+		# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
+		# du coup dim_age_dep, age_vis sont a peu pres obligatoires
+		dimList_merge <- compareVars(merge_pres_maintien, wk$interm$t_pres, "dim_")
+		# merge_pres_maintien[dim_age_dep>=age_vis] # plus tard : filtrer pour efficacité
+		dimList_merge$all
+		# on re-merge pour avoir le lx de l'age_dep et non de l'age vis
+		# pour t_pres il faut
+		# info : lx_pres
+		# cle : age_vis (avec age_dep), + dims
+		dimsButAge <- setdiff(dimList_merge$xVars, "dim_age_dep")
+		t_pres_select <- wk$interm$t_pres[
+			, c(.SD, .(lx_pres = lx, age_vis = inc))
+			, .SDcols = dimList_merge$yVars
+			]
+		wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep")
+		merge_pres_maintien_lx_age_dep <- merge(
+			x = merge_pres_maintien
+			, y = t_pres_select
+			, by.x = c("dim_age_dep", dimList_merge$common)
+			, by.y = c("age_vis", dimList_merge$common)
+		)[order(age_vis, dim_age_dep)]
+		wk$timer <- timer(wk$timer, step = "m_pres_maint_lx_age_dep OK")
 
 
 	# on rajoute la proba de tomber en dep a chaque age_vis
@@ -268,13 +282,11 @@ dep_table <- function(
 		merge_pres_maintien_p_dep[, p_survie := lx_pres / lx_age_vis]
 		merge_pres_maintien_p_dep[, VAP_dep := p_dep * a_pp_x * p_survie]
 		wk$results$lg_rente_dep <- merge_pres_maintien_p_dep[dim_age_dep>=age_vis]
-} # fin x - lg_rente_dep : tables de VAP des rentes dep
+} # fin 3 - lg_rente_dep : tables de VAP des rentes dep
 
 	# t_VAP_gie_dep
 	dimCols <- grep("^dim_",names(wk$results$lg_rente_dep), value = T)
 	res_dimsButAge <- setdiff(dimCols, "dim_age_dep")
-	wk$inputs$lg_maintien
-	wk$results$lg_rente_dep
 	wk$results$t_VAP_gie_dep <- wk$results$lg_rente_dep[
 		, .(VAP_garantie_dep = sum(VAP_dep))
 		, by = c("age_vis", res_dimsButAge)
