@@ -23,15 +23,23 @@ Complete_commut <- function(
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
 		# library(data.table)
+		{
+			library(R.AlphA)
+			root <- dirname(rstudioapi::getSourceEditorContext()$path)
+			workRRoot <- stringr::str_extract(root, ".*WorkR")
+			inputPath <- file.path(workRRoot, "pop stats", "INPUTS") #chemin dossier inputs
+		} # paramètres (root)
+
 		dimNames	= "dim_.*"
 		incName		= "(inc_.*)|age|x"
 		valName		= "(val_.*)|lx"
-		tbls <- readRDS(list.files("../pop stats/INPUTS", "tabl.*rds", full.names = T))
+		tbls <- readRDS(list.files(file.path(workRRoot,"pop stats","INPUTS"), "tabl.*rds", full.names = T))
 		# lxTable = tbls$TE[1:10**4] ; dimNames = NULL # TE : table de survie bien longue (10k lignes)
 		# lxTable = tbls$lg_maintien_HF ; dimNames = c("x", "sexe") ; incName = "anc"
 		# lxTable = tbls$BT1_prefixed
 		# lxTable = tbls$bigTables$bigTable_200 ; dimNames = c("x", "sexe", "newDimTest") ; incName = "anc"
-		lxTable = tbls$woPrefixes$TH ;  # voir si on gere les tables classiques automatiquement (sans preciser qui est inc/val)
+		lxTable = tbls$smallTables$t_vie ; incName = "age_vis"
+		lxTable = tbls$woPrefixes$TH ; incName = "(inc_.*)|age|x" # voir si on gere les tables classiques automatiquement (sans preciser qui est inc/val)
 		# lxTable = tbls$woPrefixes$bigTable_10 ; incName = "anc" ; dimNames = c("x", "sexe", "newDimTest")
 		messages = T
 		i = 0
@@ -79,9 +87,9 @@ Complete_commut <- function(
 			}
 
 
-	# retraitements
+	# retraitements ----
 		# value
-			tableToFill[is.na(lx), lx := 0] # passe les NA a 0
+			tableToFill <- tableToFill[!is.na(lx)] # lignes supprimees au lieu d'etre passees a 0
 
 		# key
 			tableToFill[, key := do.call(paste, c(.SD, sep = separator)), .SDcols = c("dims", "inc")] # TODO: gerer le cas ou il n'y a pas de dims, juste une table normale
@@ -104,7 +112,6 @@ Complete_commut <- function(
 		tableToFill_lxp1[, px := lxp1 / lx]  			# px
 		tableToFill_lxp1[, qx := 1 - px] 				# qx
 		tableToFill_lxp1[, Dx := lx * v^inc]			# DX
-		tableToFill_lxp1[is.na(tableToFill_lxp1)] <- 0
 
 
 	# Nx
@@ -118,7 +125,6 @@ Complete_commut <- function(
 	# äx et ax
 		tableToFill_Nx[, a_pp_x := Nx/Dx] 			# äx
 		tableToFill_Nx[, ax := a_pp_x - 1] 			# ax
-		tableToFill_Nx[is.na(tableToFill_Nx)] <- 0
 	# remise dans une forme plus pratique / lisible / simple
 		tableToFill_Nx[
 			, `:=` (
