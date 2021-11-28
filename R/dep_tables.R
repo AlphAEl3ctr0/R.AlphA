@@ -295,7 +295,18 @@ dep_table <- function(
 		, by = c("age_vis", res_dimsButAge)
 	]
 
+	# library(R.AlphA)
+	# plots
+	library(ggplot2)
+	wk$plots <- list()
+	p_PRC <- plotPRCRes(wk$results$t_VAP_gie_dep)
+	wk$plots$PRC <- p_PRC
 	wk$timer <- timer(wk$timer, step = "all OK")
+	p_timer <- ggplot(wk$timer, aes(x = reorder(step, - wk$timer$heure_seconds), y = dt_seconds)) +
+		geom_col() +
+		coord_flip()
+	wk$plots$timer <- p_timer
+
 	if (detailedRes) return(wk) else return(wk$results$t_VAP_gie_dep)
 
 }
