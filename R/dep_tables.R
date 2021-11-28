@@ -11,6 +11,7 @@
 #' @importFrom data.table copy
 #' @export
 dep_table <- function(
+	# encore beaucoup d'elements a corriger suite prise en compte des resils
 	inputs # objet contenant les 3 tables d'inputs
 	, detailedRes = F
 	, dim_age_dep_name = "dim_age_dep"
@@ -62,10 +63,10 @@ dep_table <- function(
 	wk$inputs <- inputs
 	if(is.null(wk$inputs$t_res)){
 		print("no t_res")
-		res_rates <- seq(from = 0.12, to = 0.03, length.out = 10)
+		nRowsDftTable <- 100
 		t_res <- data.table(
-			inc_anc = 1:4
-			, res_rates = seq(from = 0.12, to = 0.03, length.out = 4)
+			inc_anc = 1:nRowsDftTable
+			, res_rates = seq(from = 0.12, to = 0.03, length.out = nRowsDftTable)
 		)
 		t_res$lx <- qx_to_lx(t_res, incName = "inc_anc", qxName = "res_rates")
 		wk$inputs$t_res <- t_res[, .(inc_anc, lx)]
@@ -231,7 +232,7 @@ dep_table <- function(
 		wk$timer <- timer(wk$timer, step = "starting merge pres maintien")
 		merge_pres_maintien <- merge(
 			wk$interm$t_pres[
-				, c(.SD, .(cst = T, age_vis = inc, lx_age_vis = lx))
+				, c(.SD, .(cst = T, age_vis = age, lx_age_vis = lx))
 				, .SDcols = c(dimsList_maintien$xVars)
 				]
 			, wk$interm$t_ax
@@ -253,7 +254,7 @@ dep_table <- function(
 		# cle : age_vis (avec age_dep), + dims
 		dimsButAge <- setdiff(dimList_merge$xVars, "dim_age_dep")
 		t_pres_select <- wk$interm$t_pres[
-			, c(.SD, .(lx_pres = lx, age_vis = inc))
+			, c(.SD, .(lx_pres = lx, age_vis = age))
 			, .SDcols = dimList_merge$yVars
 			]
 		wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep")
@@ -271,7 +272,8 @@ dep_table <- function(
 		compare_dims_merge_inc <- compareVars(
 			merge_pres_maintien_lx_age_dep
 			, t_inc_commut
-			, "dim_")
+			, "dim_"
+		)
 		merge_pres_maintien_p_dep <- merge(
 			merge_pres_maintien_lx_age_dep
 			, t_inc_commut[, c(.SD, .(dim_age_dep = inc, p_dep = qx)), .SDcols = c(compare_dims_merge_inc$yVars) ]
