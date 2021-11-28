@@ -2,6 +2,7 @@
 #' @description keep track of time spent on different steps of code
 #' @param start to start a new time table from scratch
 #' @param timer_table table to increment with a new timer line
+#' @param message Should the function print the table for this step ?
 #' @param ... any other specification. Choose name for column and value for row
 #' @return the provided timer_table plus one line with time and the ... specifications
 #' @examples
@@ -12,14 +13,15 @@
 #' @import lubridate
 #' @rawNamespace import(data.table, except =  c(month, hour, quarter, week, year, wday, second, minute, mday, yday, isoweek))
 #' @export
-timer <- function(timer_table = data.table(),start = FALSE, ...){
+timer <- function(timer_table = data.table(),start = FALSE, message = F, ...){
 	manualrun <- T
 	manualrun <- F
 	if (manualrun) {
+		message = T
 		library(lubridate)
-		start = 1
-		message("! parameters manually defined inside function for tests. Do not use results !")
-		timer_table = tm_Natmerge
+		start = T
+		warning("! parameters manually defined inside function for tests. Do not use results !")
+		timer_table = data.table()
 	}
 	# t1, t2
 		if(start) {
@@ -67,9 +69,9 @@ timer <- function(timer_table = data.table(),start = FALSE, ...){
 			}
 		}
 	# timer_table :
-		timer_table_int <- rbind(timer_table,time_inter, fill = TRUE)
-		return(timer_table_int)
-		# timer_table <<- timer_table_int
+		timer_table_final <- rbind(timer_table,time_inter, fill = TRUE)
+		if (message) print(time_inter)
+		return(timer_table_final)
 }
 
 #

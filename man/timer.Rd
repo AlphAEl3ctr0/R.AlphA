@@ -4,7 +4,7 @@
 \alias{timer}
 \title{Times steps - new version : don't create time table as global variable cause it sucks}
 \usage{
-timer(timer_table = data.table(), start = FALSE, ...)
+timer(timer_table = data.table(), start = FALSE, message = F, ...)
 }
 \arguments{
 \item{timer_table}{table to increment with a new timer line}
