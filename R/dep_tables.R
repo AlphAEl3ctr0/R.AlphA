@@ -6,9 +6,12 @@
 #' @param i actualisation rate --> not yet
 #' @param detailedRes if FALSE : only returns the table of EPV by age
 #' @param dim_age_dep_name name of the column giving age when turning dependent
+#' @param timer_messages Should we call messages from the timer function ?
 #' @importFrom readr parse_number
 #' @importFrom stringr str_extract str_detect
 #' @importFrom data.table copy
+#' @importFrom stats median reorder
+#' @import ggplot2
 #' @export
 dep_table <- function(
 	# encore beaucoup d'elements a corriger suite prise en compte des resils
@@ -16,9 +19,9 @@ dep_table <- function(
 	, detailedRes = F
 	, dim_age_dep_name = "dim_age_dep"
 	, i = 0
+	, timer_messages = F
 ){
 	wk <- list()
-	wk$timer <- timer(start = T)
 	manualrun <- T
 	manualrun <- F
 	if (manualrun) {
@@ -28,6 +31,7 @@ dep_table <- function(
 		# library(R.AlphA)
 		# library(stringr)
 		detailedRes = T
+		timer_messages = T
 		{
 			library(R.AlphA)
 			root <- dirname(rstudioapi::getSourceEditorContext()$path)
@@ -58,7 +62,8 @@ dep_table <- function(
 		# names(tbls$bigTables$bigTable_1)
 	};{
 	}
-	wk$timer <- timer(wk$timer, step = "startfun")
+	wk$timer <- timer(start = T, message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "startfun", message = timer_messages)
 	# 1 - inputs / ajout commuts ---------------------------------
 	wk$inputs <- inputs
 	if(is.null(wk$inputs$t_res)){
@@ -82,13 +87,13 @@ dep_table <- function(
 
 	# ajout nbs de commut sur toutes les tables
 	{
-		wk$timer <- timer(wk$timer, step = "start adding commuts")
+		wk$timer <- timer(wk$timer, step = "start adding commuts", message = timer_messages)
 		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*|age", i = i)
 		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*|age", i = i)
 		t_res_commut <- Complete_commut(wk$inputs$t_res, incName = "age_vis|inc_.*|age", i = i)
 		lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
 	} ;{
-		wk$timer <- timer(wk$timer, step = "commuts OK")
+		wk$timer <- timer(wk$timer, step = "commuts OK", message = timer_messages)
 	}
 
 	# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil ----
@@ -100,7 +105,7 @@ dep_table <- function(
 			t_vie_commut_filter <- t_vie_commut[inc %in% commonInc]
 			t_inc_commut_filter <- t_inc_commut[inc %in% commonInc]
 } ; {
-			wk$timer <- timer(wk$timer, step = "length OK") # (gestion de la longueur differente)
+			wk$timer <- timer(wk$timer, step = "length OK", message = timer_messages)
 		}
 		dims_vie_inc <- compareVars(t_vie_commut_filter, t_inc_commut_filter, "dim_") # pattern inc viree pour l'ajouter manuellement
 		# verif : les dimensions en commun ont elles les memes valeurs ?
@@ -138,14 +143,14 @@ dep_table <- function(
 
 		# _2.1 - m_vie_inc ----
 		{
-			wk$timer <- timer(wk$timer, step = "start merging vie_inc")
+			wk$timer <- timer(wk$timer, step = "start merging vie_inc", message = timer_messages)
 			m_vie_inc <- merge(
 				 all=F
 				, x = t_vie_commut_filter[, c(.SD, .(qx_vie = qx, age = inc)), .SDcols = c(dims_vie_inc$xVars)]
 				, y = t_inc_commut_filter[, c(.SD, .(qx_inc = qx, age = inc)), .SDcols = c(dims_vie_inc$yVars)]
 				, by = c("age",dims_vie_inc$common)
 			)
-			wk$timer <- timer(wk$timer, step = "m_vie_inc OK")
+			wk$timer <- timer(wk$timer, step = "m_vie_inc OK", message = timer_messages)
 } # fin 2.1
 		# _2.2 - m_vie_inc_resils ----
 		{
@@ -162,7 +167,7 @@ dep_table <- function(
 				, allow.cartesian = T
 			)
 			m_VIR[, dim_age_sous := age - anc]
-			wk$timer <- timer(wk$timer, step = "m_VIR OK")
+			wk$timer <- timer(wk$timer, step = "m_VIR OK", message = timer_messages)
 } # fin 2.2
 		m_pres <- copy(m_VIR) # vu la taille, p-e pas une bonne idee
 		# _2.3 - calcul somme des qx ----
@@ -183,7 +188,7 @@ dep_table <- function(
 			)
 } # somme des qx puis reconstitution lx
 
-		wk$timer <- timer(wk$timer, step = "m_pres OK")
+		wk$timer <- timer(wk$timer, step = "m_pres OK", message = timer_messages)
 		wk$interm$t_pres <- m_pres[, .(lx = lx_pres, dim_age_sous), by = c("anc", "age",dimsVIR$all)] # attention il reste des bugs sur les dernieres lignes de la table
 } # fin 2 - t_pres
 	# Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
@@ -191,10 +196,10 @@ dep_table <- function(
 	# 3 - lg_rente_dep ----
 	lg_maintien_commuts[1:6]
 	t_pres_commut <- Complete_commut(wk$interm$t_pres, incName = "age", i = i)
-	wk$timer <- timer(wk$timer, step = "t_pres_commut OK")
+	wk$timer <- timer(wk$timer, step = "t_pres_commut OK", message = timer_messages)
 	{
 		table(lg_maintien_commuts$inc)
-		wk$timer <- timer(wk$timer, step = "table lg maintien OK (a virer mais juste pour voir)")
+		wk$timer <- timer(wk$timer, step = "table lg maintien OK (a virer mais juste pour voir)", message = timer_messages)
 
 
 		# on verifie si dim_age_dep est renseigne ou non
@@ -229,7 +234,7 @@ dep_table <- function(
 			]
 
 
-		wk$timer <- timer(wk$timer, step = "starting merge pres maintien")
+		wk$timer <- timer(wk$timer, step = "starting merge pres maintien", message = timer_messages)
 		merge_pres_maintien <- merge(
 			wk$interm$t_pres[
 				, c(.SD, .(cst = T, age_vis = age, lx_age_vis = lx))
@@ -240,7 +245,7 @@ dep_table <- function(
 			, all=F
 			, allow.cartesian = T
 		)[order(age_vis, dim_age_dep)][, cst := NULL] # TODO: dim_age_dep a generaliser
-		wk$timer <- timer(wk$timer, step = "merge pres maintien OK")
+		wk$timer <- timer(wk$timer, step = "merge pres maintien OK", message = timer_messages)
 
 		dimsList_maintien$all
 		# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
@@ -257,14 +262,14 @@ dep_table <- function(
 			, c(.SD, .(lx_pres = lx, age_vis = age))
 			, .SDcols = dimList_merge$yVars
 			]
-		wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep")
+		wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep", message = timer_messages)
 		merge_pres_maintien_lx_age_dep <- merge(
 			x = merge_pres_maintien
 			, y = t_pres_select
 			, by.x = c("dim_age_dep", dimList_merge$common)
 			, by.y = c("age_vis", dimList_merge$common)
 		)[order(age_vis, dim_age_dep)]
-		wk$timer <- timer(wk$timer, step = "m_pres_maint_lx_age_dep OK")
+		wk$timer <- timer(wk$timer, step = "m_pres_maint_lx_age_dep OK", message = timer_messages)
 
 
 	# on rajoute la proba de tomber en dep a chaque age_vis
@@ -280,7 +285,7 @@ dep_table <- function(
 			, by = c("dim_age_dep", compare_dims_merge_inc$common)
 		)[order(age_vis, dim_age_dep)] #age dep >= age vis
 		# TODO: gerer aussi la longueur
-		wk$timer <- timer(wk$timer, step = "m_pres_maintien_p_dep OK")
+		wk$timer <- timer(wk$timer, step = "m_pres_maintien_p_dep OK", message = timer_messages)
 
 		merge_pres_maintien_p_dep[, p_survie := lx_pres / lx_age_vis]
 		merge_pres_maintien_p_dep[, VAP_dep := p_dep * a_pp_x * p_survie]
@@ -295,13 +300,12 @@ dep_table <- function(
 		, by = c("age_vis", res_dimsButAge)
 	]
 
-	# library(R.AlphA)
 	# plots
-	library(ggplot2)
+
 	wk$plots <- list()
 	p_PRC <- plotPRCRes(wk$results$t_VAP_gie_dep)
 	wk$plots$PRC <- p_PRC
-	wk$timer <- timer(wk$timer, step = "all OK")
+	wk$timer <- timer(wk$timer, step = "all OK", message = timer_messages)
 	p_timer <- ggplot(wk$timer, aes(x = reorder(step, - wk$timer$heure_seconds), y = dt_seconds)) +
 		geom_col() +
 		coord_flip()

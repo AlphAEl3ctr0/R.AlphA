@@ -18,7 +18,6 @@ timer <- function(timer_table = data.table(),start = FALSE, message = F, ...){
 	manualrun <- F
 	if (manualrun) {
 		message = T
-		library(lubridate)
 		start = T
 		warning("! parameters manually defined inside function for tests. Do not use results !")
 		timer_table = data.table()

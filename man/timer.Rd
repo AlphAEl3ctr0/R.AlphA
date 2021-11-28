@@ -11,6 +11,8 @@ timer(timer_table = data.table(), start = FALSE, message = F, ...)
 
 \item{start}{to start a new time table from scratch}
 
+\item{message}{Should the function print the table for this step ?}
+
 \item{...}{any other specification. Choose name for column and value for row}
 }
 \value{

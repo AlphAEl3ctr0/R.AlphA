@@ -4,7 +4,13 @@
 \alias{dep_table}
 \title{Long-term care EPV}
 \usage{
-dep_table(inputs, detailedRes = F, dim_age_dep_name = "dim_age_dep", i = 0)
+dep_table(
+  inputs,
+  detailedRes = F,
+  dim_age_dep_name = "dim_age_dep",
+  i = 0,
+  timer_messages = F
+)
 }
 \arguments{
 \item{inputs}{3 tables : incidence rate / mortality / dependents mortality}
@@ -14,6 +20,8 @@ dep_table(inputs, detailedRes = F, dim_age_dep_name = "dim_age_dep", i = 0)
 \item{dim_age_dep_name}{name of the column giving age when turning dependent}
 
 \item{i}{actualisation rate --> not yet}
+
+\item{timer_messages}{Should we call messages from the timer function ?}
 }
 \description{
 compute Expected Present Value of long-term care annuities, in
