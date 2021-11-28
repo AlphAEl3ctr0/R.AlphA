@@ -48,7 +48,7 @@ qx_to_lx <- function(
 		, key := do.call(paste, c(.SD, sep = separator))
 		, .SDcols = c("dims", "inc")
 		] # TODO: gerer le cas ou il n'y a pas de dims, juste une table normale
-	if (anyDuplicated(melt_maintien$key)) message("!! duplicated key")
+	if (anyDuplicated(melt_maintien$key)) warning("!! duplicated key")
 
 	melt_maintien[
 		order(dims, inc)
