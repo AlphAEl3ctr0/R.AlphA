@@ -1,4 +1,11 @@
-# importer ggplot
+#' @title Describe IRP results
+#' @description Quick plots describing IRP (PRC in french) results
+#' @param data the final table giving IRP
+#' @param var default age_vis, the variable on x axis
+#' @return a plot of IRP by age (or by chosen var)
+#' @import ggplot2
+# #' @rawNamespace import(data.table, except =  c(month, hour, quarter, week, year, wday, second, minute, mday, yday, isoweek))
+#' @export
 plotPRCRes <- function(
 	data
 	, var = "age_vis"

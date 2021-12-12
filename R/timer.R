@@ -69,7 +69,9 @@ timer <- function(timer_table = data.table(),start = FALSE, message = F, ...){
 		}
 	# timer_table :
 		timer_table_final <- rbind(timer_table,time_inter, fill = TRUE)
-		if (message) print(time_inter)
+		if (message) print(paste0(
+			"time : ", time_inter$heure, " - step : ", time_inter$step
+		))
 		return(timer_table_final)
 }
 
