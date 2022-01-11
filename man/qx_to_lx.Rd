@@ -13,7 +13,7 @@ qx_to_lx(data, dimsNames = NULL, incName, qxName = "qx")
 
 \item{incName}{should be close to parameters from complete_commut function}
 
-\item{qxName}{default qx. if this not the correct name}
+\item{qxName}{default : "qx". if the name is different, provide it}
 }
 \value{
 the lx column

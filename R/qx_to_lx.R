@@ -3,7 +3,7 @@
 #' @param data the table
 #' @param dimsNames should be close to parameters from complete_commut function
 #' @param incName should be close to parameters from complete_commut function
-#' @param qxName default qx. if this not the correct name
+#' @param qxName default : "qx". if the name is different, provide it
 #' @return the lx column
 #' @export
 
@@ -61,11 +61,11 @@ qx_to_lx <- function(
 		, .SDcols = c("dims", "inc_p1")
 		]
 
+	get_x_infos <- melt_maintien[, .(key = key_xp1, lx = lxp1)]
 	melt_maintien_lx <- merge(
 		melt_maintien
-		, melt_maintien[, .(key_xp1, lx = lxp1)]
-		, by.x = c("key")
-		, by.y = c("key_xp1")
+		, get_x_infos
+		, by = c("key")
 		, all.x = T
 	)[order(dims, inc)]
 	melt_maintien_lx[inc==min(inc), lx := 1]

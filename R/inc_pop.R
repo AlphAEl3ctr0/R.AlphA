@@ -5,6 +5,8 @@
 #' @param p_resilRate cancellation rate of people in the table
 #' @param p_subRate new rows to add - depending on the current table size
 #' @param messages should the function print messages while running (info only)
+#' @param age_min will be passed to generate_pop
+#' @param age_max will be passed to generate_pop
 #' @importFrom stats runif rpois
 #' @export
 
@@ -13,7 +15,8 @@ inc_pop <- function(
 	, p_resilRate = 2/100
 	, p_subRate = 2/100
 	, messages = F
-
+	, age_min = 18
+	, age_max = 20
 ){
 	manualrun <- T
 	manualrun <- F
@@ -62,8 +65,8 @@ inc_pop <- function(
 		, min_sub = oldvis
 		, max_sub = newVision
 		, messages = messages
-		, age_min = 18
-		, age_max = 20
+		, age_min = age_min
+		, age_max = age_max
 	) # --> il faut pouvoir gérer les dates de souscription facilement
 
 	# concatenation des nouveaux et des anciens

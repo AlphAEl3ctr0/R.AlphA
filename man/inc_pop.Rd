@@ -8,7 +8,9 @@ inc_pop(
   old_pop = generate_pop(100),
   p_resilRate = 2/100,
   p_subRate = 2/100,
-  messages = F
+  messages = F,
+  age_min = 18,
+  age_max = 20
 )
 }
 \arguments{
@@ -19,6 +21,10 @@ inc_pop(
 \item{p_subRate}{new rows to add - depending on the current table size}
 
 \item{messages}{should the function print messages while running (info only)}
+
+\item{age_min}{will be passed to generate_pop}
+
+\item{age_max}{will be passed to generate_pop}
 }
 \description{
 From a pop table with "generate_pop()" format, simulate the new population at N+1
