@@ -68,7 +68,14 @@ Complete_commut <- function(
 			tableToFill[, lx := get(valColumn)]
 		# increment
 			incColumn <- namesTable[type == "inc"]$names
-			if (length(incColumn) > 1) stop("more than 1 increment column found")
+			if (length(incColumn) > 1) {
+				groupIncName <- grep("^inc_grp_", incColumn, value = TRUE)
+				if (length(groupIncName)==1) {
+					incColumn <- groupIncName
+				} else {
+					stop("more than 1 increment column found")
+				}
+			}
 			if (length(incColumn) < 1) stop("no increment column found")
 			tableToFill[, inc := readr::parse_number(as.character(get(incColumn)))]
 		# dimensions
