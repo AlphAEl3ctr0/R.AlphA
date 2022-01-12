@@ -21,6 +21,11 @@ dep_table <- function(
 	, i = 0
 	, timer_messages = F
 ){
+################################################################################
+################################################################################
+
+# 0 - init ---------------------------------
+{
 	wk <- list()
 	manualrun <- T
 	manualrun <- F
@@ -42,7 +47,7 @@ dep_table <- function(
 			# annees <- 60 # nombre d'années sur lesquelles projeter
 			inputPath <- file.path(workRRoot, "pop stats", "INPUTS") #chemin dossier inputs
 			# popFilesPath <- file.path(root, "fichiers_pop")
-} # paramètres (root)
+		} # paramètres (root)
 		i <- 0
 		# inputs : t_vie / t_inc / lg_maintien
 		inputs <- list()
@@ -57,17 +62,19 @@ dep_table <- function(
 			inputs$t_vie <- tbls$qalydays$lg_survie_hors_dep
 			inputs$t_inc <- tbls$qalydays$incidence
 			inputs$lg_maintien <- tbls$qalydays$lg_qx_mens_dep ; dim_age_dep_name = "dim_age_dep"
-} # tables d'input : qalydays
+		} # tables d'input : qalydays
 		inputs <- tbls$STMult_start50 ; dim_age_dep_name = "dim_age_dep" # tables d'input : ST depart 50 pr lg_maint
 		inputs <- tbls$smallTables; dim_age_dep_name = "dim_age_dep"   # tables d'input : smallTables
 		# names(tbls$bigTables$bigTable_1)
 		inputs <- tbls$simpleTables; dim_age_dep_name <- "dim_x"
-	};{
 	}
 	wk$timer <- timer(start = T, message = timer_messages)
 	wk$timer <- timer(wk$timer, step = "startfun", message = timer_messages)
-	# 1 - inputs / ajout commuts ---------------------------------
-	wk$inputs <- inputs
+} # manualrun + init wk and timer
+
+# 1 - inputs / ajout commuts ---------------------------------
+wk$inputs <- inputs
+{
 	if(is.null(wk$inputs$t_res)){
 		print("no t_res")
 		nRowsDftTable <- 100
@@ -78,191 +85,193 @@ dep_table <- function(
 		t_res$lx <- qx_to_lx(t_res, incName = "inc_anc_ct", qxName = "res_rates")
 		wk$inputs$t_res <- t_res[, .(inc_anc_ct, lx)]
 	}
-
+} # default t_res
+{
 	if (missing(i)) {
 		message("actualisation rate (i) not provided : set to 0 by default")
 	} else if (i>0) {
 		warning("you provided i : it is not correctly supported yet ",
 				"so do not use results.")
-	};{ # warning about i
 	}
+} # warning about i
+{
+	wk$timer <- timer(wk$timer, step = "start adding commuts", message = timer_messages)
+	t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*|age", i = i)
+	t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*|age", i = i)
+	t_res_commut <- Complete_commut(wk$inputs$t_res, incName = "age_vis|inc_.*|age", i = i)
+	lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
+	wk$timer <- timer(wk$timer, step = "commuts OK", message = timer_messages)
+} # ajout nbs de commut sur toutes les tables
 
-	# ajout nbs de commut sur toutes les tables
-	{
-		wk$timer <- timer(wk$timer, step = "start adding commuts", message = timer_messages)
-		t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*|age", i = i)
-		t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*|age", i = i)
-		t_res_commut <- Complete_commut(wk$inputs$t_res, incName = "age_vis|inc_.*|age", i = i)
-		lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
-	} ;{
-		wk$timer <- timer(wk$timer, step = "commuts OK", message = timer_messages)
-	}
 
-	# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil ----
-	{
-			# Il faut fusionner 2 tables avec largeur ET longueur differentes
-				# TODO: ajouter un avertissement si on supprime des lignes
-			# verif : les dimensions en commun ont elles les memes valeurs ?
-			for (testVar in dims_vie_inc$common){
-				# testVar <- "dim_sexe"
-				xVals <- unique(t_vie_commut_filter[, get(testVar)])
-				yVals <- unique(t_inc_commut_filter[, get(testVar)])
-				if(length(setdiff(xVals, yVals))) {
-					message("for column : ", testVar)
-					message("some values are not in common ")
-					message("vals t_vie : ", paste(xVals, collapse = ","))
-					message("vals t_inc : ", paste(yVals, collapse = ","))
-					message(
-						"values not in common : "
-						, paste(
-							collapse = ","
-							, setdiff(xVals, yVals)
-							, setdiff(yVals, xVals)
-						) # attention bug, a revoir
-					)
-				}
-			}
-					# verif : meme largeur ?
-					if (length(dims_vie_inc$exclusive)>0){
-						warning(call. = T
-								, "incidence and mortality table have different sets of dimension"
-								, "\n exclusive cols : "
-								, paste(dims_vie_inc$exclusive, collapse = ","))
-					}
+# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil ----
+{
+	# {
+	# 	# Il faut fusionner 2 tables avec largeur ET longueur differentes
+	# 	# TODO: ajouter un avertissement si on supprime des lignes
+	# 	# verif : les dimensions en commun ont elles les memes valeurs ?
+	# 	for (testVar in dims_vie_inc$common){
+	# 		# testVar <- "dim_sexe"
+	# 		xVals <- unique(t_vie_commut_filter[, get(testVar)])
+	# 		yVals <- unique(t_inc_commut_filter[, get(testVar)])
+	# 		if(length(setdiff(xVals, yVals))) {
+	# 			message("for column : ", testVar)
+	# 			message("some values are not in common ")
+	# 			message("vals t_vie : ", paste(xVals, collapse = ","))
+	# 			message("vals t_inc : ", paste(yVals, collapse = ","))
+	# 			message(
+	# 				"values not in common : "
+	# 				, paste(
+	# 					collapse = ","
+	# 					, setdiff(xVals, yVals)
+	# 					, setdiff(yVals, xVals)
+	# 				) # attention bug, a revoir
+	# 			)
+	# 		}
+	# 	}
+	# } # checking if values are the sames for common dims
+	# {
+	# 	if (length(dims_vie_inc$exclusive)>0){
+	# 		warning(call. = T
+	# 				, "incidence and mortality table have different sets of dimension"
+	# 				, "\n exclusive cols : "
+	# 				, paste(dims_vie_inc$exclusive, collapse = ","))
+	# 	}
+	# } # checking if dimensions are the same
+} # checks --> to be moved in mergeLifeTables function
+{
+	m_vie_inc_vfun <- mergeLifeTables(
+		t_vie_commut, xName = "vie"
+		, t_inc_commut, yName = "inc"
+	)
+	wk$timer <- timer(wk$timer, step = "m_vie_inc OK", message = timer_messages)
+} # _2.1 - m_vie_inc
+{
+	# ajout des resiliations
+	# longueur : non geree, on fait toujours un produit cartesien
+	m_VIR_vfun <- mergeLifeTables(
+		# m_vie_inc[ , .(inc_age = age, qx = qx_vie + qx_inc)]
+		m_vie_inc_vfun
+		, Complete_commut(wk$inputs$t_res)[, qx_res := qx]
+		, valPatt = "^qx_"
+		# , yName = "res"
+	)
 
-		# _2.1 - m_vie_inc ----
-		{
+	wk$timer <- timer(wk$timer, step = "m_VIR OK", message = timer_messages)
+} # _2.2 - m_vie_inc_resils
+{
+	m_pres_vfun <- groupIncs(m_VIR_vfun)
+	m_pres_vfun[, qx := qx_vie+ qx_inc + qx_res]
+	incgrp <- grep("inc_grp_", names(m_pres_vfun), value = TRUE)
+	m_pres_vfun$lx <- qx_to_lx(m_pres_vfun, incName = incgrp, dimsNames = "dims")
+	m_pres_vfun[is.na(lx)] # devrait etre vide
+	dimDifNm <- grep("dim_dif_", names(m_pres_vfun), value = TRUE)
 
-			m_vie_inc_vfun <- mergeLifeTables(
-				t_vie_commut, xName = "vie"
-				, t_inc_commut, yName = "inc"
-			)
-			wk$timer <- timer(wk$timer, step = "m_vie_inc OK", message = timer_messages)
-		} # fin 2.1
-		# _2.2 - m_vie_inc_resils ----
-		{
-			# ajout des resiliations
-			# longueur : non geree, on fait toujours un produit cartesien
-			m_VIR_vfun <- mergeLifeTables(
-				# m_vie_inc[ , .(inc_age = age, qx = qx_vie + qx_inc)]
-				m_vie_inc_vfun
-				, Complete_commut(wk$inputs$t_res)[, qx_res := qx]
-				, valPatt = "^qx_"
-				# , yName = "res"
-			)
-			m_pres_vfun <- groupIncs(m_VIR_vfun)
-			m_pres_vfun[, qx := qx_vie+ qx_inc + qx_res]
-			incgrp <- grep("inc_grp_", names(m_pres_vfun), value = TRUE)
-			m_pres_vfun$lx <- qx_to_lx(m_pres_vfun, incName = incgrp, dimsNames = "dims")
-			m_pres_vfun[is.na(lx)] # devrait etre vide
+	wk$timer <- timer(wk$timer, step = "m_pres OK", message = timer_messages)
+	wk$interm$t_pres_vfun <- m_pres_vfun
+} # _2.3 - t_pres
 
-			wk$timer <- timer(wk$timer, step = "m_VIR OK", message = timer_messages)
-} # fin 2.2
-		# _2.3 - calcul somme des qx ----
-			dimDifNm <- grep("dim_dif_", names(m_pres_vfun), value = TRUE)
 
-		wk$timer <- timer(wk$timer, step = "m_pres OK", message = timer_messages)
-		wk$interm$t_pres_vfun <- m_pres_vfun
-} # fin 2 - t_pres
-	# Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
-	# aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
-	# 3 - lg_rente_dep ----
+# 3 - lg_rente_dep ----
+# Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
+# aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
+{
 	t_pres_commut_vfun <- Complete_commut(wk$interm$t_pres_vfun, incName = "inc_grp_.*", i = i)
 	wk$timer <- timer(wk$timer, step = "t_pres_commut OK", message = timer_messages)
-	{
-		# on verifie si dim_age_dep est renseigne ou non dans lg_maintien
-		{
-			if (missing(dim_age_dep_name)) {
-				if (!"dim_age_dep" %in% names(lg_maintien_commuts)){
-					message("column dim_age_dep not in lg_maintien :")
-					message("please provide the name for corresponding column")
-				}
-			} else {
-				if (!dim_age_dep_name %in% names(lg_maintien_commuts)){
-					message("column ", dim_age_dep_name, " not in lg_maintien :")
-					message("please provide an existing name for the dim_age_dep column")
-				} else {
-					# lg_maintien_commuts[, dim_age_dep := get(dim_age_dep_name)] # nop : mieux vaut ne pas dupliquer des colonnes
-					setnames(lg_maintien_commuts, dim_age_dep_name, "dim_age_dep")
-					message("dim_age_dep set to ", dim_age_dep_name)
-				}
-			}
+} # add commuts to t_pres
+{
+	if (missing(dim_age_dep_name)) {
+		if (!"dim_age_dep" %in% names(lg_maintien_commuts)){
+			message("column dim_age_dep not in lg_maintien :")
+			message("please provide the name for corresponding column")
 		}
-		# pdt cartesien
-		# pour chaque age_vis : liste de tous les age_dep possibles et de l'ax correspondant
-		dimsList_maintien_vfun <- compareVars(wk$interm$t_pres_vfun, lg_maintien_commuts, "dim_")
+	} else {
+		if (!dim_age_dep_name %in% names(lg_maintien_commuts)){
+			message("column ", dim_age_dep_name, " not in lg_maintien :")
+			message("please provide an existing name for the dim_age_dep column")
+		} else {
+			# lg_maintien_commuts[, dim_age_dep := get(dim_age_dep_name)] # nop : mieux vaut ne pas dupliquer des colonnes
+			setnames(lg_maintien_commuts, dim_age_dep_name, "dim_age_dep")
+			message("dim_age_dep set to ", dim_age_dep_name)
+		}
+	}
+} # on verifie si dim_age_dep est renseigne ou non dans lg_maintien
+{
+	# pdt cartesien
+	# pour chaque age_vis : liste de tous les age_dep possibles et de l'ax correspondant
+	# d'abord : ax pour chaque age_dep. On va considerer que dim_age_dep
+	# est obligatoire pour l'instant
+	dimsList_maintien_vfun <- compareVars(wk$interm$t_pres_vfun, lg_maintien_commuts, "dim_")
+	wk$interm$t_ax <- lg_maintien_commuts[
+		readr::parse_number(as.character(inc))==0
+		, c(.SD, .(a_pp_x_dep = a_pp_x))
+		, .SDcols = c(dimsList_maintien_vfun$yVars)
+		]
+} # t_ax : ax pour chaque age_dep
+{
+	wk$timer <- timer(wk$timer, step = "starting merge pres t_ax", message = timer_messages)
+	merge_pres_tax_vfun <- mergeLifeTables(
+		wk$interm$t_pres_vfun[, lx_age_vis := lx]
+		, wk$interm$t_ax
+		, valPatt = "a_pp_x|^lx_"
+	)
+	wk$timer <- timer(wk$timer, step = "merge_pres_tax OK", message = timer_messages)
+} # merge t_pres and t_ax
+{
+	# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
+	# du coup dim_age_dep, age_vis sont a peu pres obligatoires
+	dimList_merge_vfun <- compareVars(merge_pres_tax_vfun, wk$interm$t_pres_vfun, "dim_")
+	age_vis_name <- grep("inc_", names(wk$inputs$t_vie), value = TRUE)
+	# merge_pres_tax[dim_age_dep>=age_vis] # plus tard : filtrer pour efficacité
+	# on re-merge pour avoir le lx de l'age_dep et non de l'age vis (+ tard : Dx)
+	# pour t_pres il faut :
+		# colonne d'info : lx_pres
+		# et la cle : age_vis (joint avec age_dep), + dims
+		# age_vis sera utilisé comme "age_dep" lors de la jointure avec
+		# m_pres_tax, afin d'obtenir le lx de chaque age_dep et donc la
+		# proba d'etre toujours present a l'arrivee a chaque age dep
+	t_pres_select_vfun <- wk$interm$t_pres_vfun[
+		, c(.SD, .(lx_pres = lx, age_vis = get(age_vis_name)))
+		, .SDcols = dimList_merge_vfun$yVars
+		][order(get(dimDifNm), age_vis)]
+} # t_pres_select : selection / renommage colonnes
+{
+	wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep", message = timer_messages)
+	# on a deja merge_pres_tax donnant le lx aujourd'hui
+	# on ajoute la colonne lx_pres de la table t_pres_select pour avoir
+	# le lx a chaque age d'entrée en dep potentiel --> proba d'etre tjrs
+	# present a chacun de ces ages
+	merge_pres_tax_lx_age_dep_vfun <- merge(
+		x = merge_pres_tax_vfun
+		, y = t_pres_select_vfun
+		, by.x = c("dim_age_dep", dimList_merge_vfun$common)
+		, by.y = c("age_vis"    , dimList_merge_vfun$common)
+		# , all = T # reste a voir si all doit etre T ou F
+	)
+	wk$timer <- timer(wk$timer, step = "merge_pres_tax_lx_age_dep OK", message = timer_messages)
+} # merge : m_pres_tax and t_pres_select
+{
+	# merge_pres_tax_lx_age_dep_vfun$p_dep <- getDepProb$p_dep # bonne pratique mais pr l'instant ne fonctionne pas a cause de l'ordre de la table
+	compare_dims_merge_inc_vfun <- compareVars(
+		merge_pres_tax_lx_age_dep_vfun
+		, t_inc_commut
+		, "dim_"
+	)
+	merge_pres_tax_p_dep_vfun <- merge(
+		merge_pres_tax_lx_age_dep_vfun
+		, t_inc_commut[, c(.SD, .(dim_age_dep = inc, p_dep = qx)), .SDcols = compare_dims_merge_inc_vfun$yVars]
+		, by = c("dim_age_dep", compare_dims_merge_inc_vfun$common)
+	)
+	merge_pres_tax_p_dep_vfun[, p_survie := lx_pres / lx_age_vis]
+	merge_pres_tax_p_dep_vfun[, VAP_dep := p_dep * a_pp_x_dep * p_survie]
+	wk$results$lg_rente_dep_vfun <- merge_pres_tax_p_dep_vfun[dim_age_dep>=get(age_vis_name)]
+	# TODO: gerer aussi la longueur
+	wk$timer <- timer(wk$timer, step = "m_pres_tax_p_dep OK", message = timer_messages)
+} # on rajoute la proba de tomber en dep a chaque age_vis
 
-		# d'abord : ax pour chaque age_dep. On va considerer que dim_age_dep
-		# est obligatoire pour l'instant
-		wk$interm$t_ax <- lg_maintien_commuts[
-			readr::parse_number(as.character(inc))==0
-			, c(.SD, .(a_pp_x_dep = a_pp_x))
-			, .SDcols = c(dimsList_maintien_vfun$yVars)
-			]
 
-
-		wk$timer <- timer(wk$timer, step = "starting merge pres t_ax", message = timer_messages)
-		merge_pres_tax_vfun <- mergeLifeTables(
-			wk$interm$t_pres_vfun[, lx_age_vis := lx]
-			, wk$interm$t_ax
-			, valPatt = "a_pp_x|^lx_"
-		)
-
-		wk$timer <- timer(wk$timer, step = "merge_pres_tax OK", message = timer_messages)
-
-		# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
-		# du coup dim_age_dep, age_vis sont a peu pres obligatoires
-		dimList_merge_vfun <- compareVars(merge_pres_tax_vfun, wk$interm$t_pres_vfun, "dim_")
-		age_vis_name <- grep("inc_", names(wk$inputs$t_vie), value = TRUE)
-		# merge_pres_tax[dim_age_dep>=age_vis] # plus tard : filtrer pour efficacité
-		# on re-merge pour avoir le lx de l'age_dep et non de l'age vis (+ tard : Dx)
-		# pour t_pres il faut :
-			# colonne d'info : lx_pres
-			# et la cle : age_vis (joint avec age_dep), + dims
-			# age_vis sera utilisé comme "age_dep" lors de la jointure avec
-			# m_pres_tax, afin d'obtenir le lx de chaque age_dep et donc la
-			# proba d'etre toujours present a l'arrivee a chaque age dep
-		t_pres_select_vfun <- wk$interm$t_pres_vfun[
-			, c(.SD, .(lx_pres = lx, age_vis = get(age_vis_name)))
-			, .SDcols = dimList_merge_vfun$yVars
-			][order(get(dimDifNm), age_vis)]
-
-
-		wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep", message = timer_messages)
-		# on a deja merge_pres_tax donnant le lx aujourd'hui
-		# on ajoute la colonne lx_pres de la table t_pres_select pour avoir
-		# le lx a chaque age d'entrée en dep potentiel --> proba d'etre tjrs
-		# present a chacun de ces ages
-		merge_pres_tax_lx_age_dep_vfun <- merge(
-			x = merge_pres_tax_vfun
-			, y = t_pres_select_vfun
-			, by.x = c("dim_age_dep", dimList_merge_vfun$common)
-			, by.y = c("age_vis"    , dimList_merge_vfun$common)
-			# , all = T # reste a voir si all doit etre T ou F
-		)
-		wk$timer <- timer(wk$timer, step = "merge_pres_tax_lx_age_dep OK", message = timer_messages)
-
-
-	# on rajoute la proba de tomber en dep a chaque age_vis
-		# merge_pres_tax_lx_age_dep_vfun$p_dep <- getDepProb$p_dep # bonne pratique mais pr l'instant ne fonctionne pas a cause de l'ordre de la table
-		compare_dims_merge_inc_vfun <- compareVars(
-			merge_pres_tax_lx_age_dep_vfun
-			, t_inc_commut
-			, "dim_"
-		)
-		merge_pres_tax_p_dep_vfun <- merge(
-			merge_pres_tax_lx_age_dep_vfun
-			, t_inc_commut[, c(.SD, .(dim_age_dep = inc, p_dep = qx)), .SDcols = compare_dims_merge_inc_vfun$yVars]
-			, by = c("dim_age_dep", compare_dims_merge_inc_vfun$common)
-		)
-		merge_pres_tax_p_dep_vfun[, p_survie := lx_pres / lx_age_vis]
-		merge_pres_tax_p_dep_vfun[, VAP_dep := p_dep * a_pp_x_dep * p_survie]
-		wk$results$lg_rente_dep_vfun <- merge_pres_tax_p_dep_vfun[dim_age_dep>=get(age_vis_name)]
-		# TODO: gerer aussi la longueur
-		wk$timer <- timer(wk$timer, step = "m_pres_tax_p_dep OK", message = timer_messages)
-} # fin 3 - lg_rente_dep : tables de VAP des rentes dep
-
-	# t_VAP_gie_dep
+# 4 - t_VAP_gie_dep ----
+{
 	dimCols_vfun <- grep("^dim_",names(wk$results$lg_rente_dep_vfun), value = T)
 	res_dimsButAge_vfun <- setdiff(dimCols_vfun, "dim_age_dep")
 	res_incNames <- grep("^inc_", names(wk$results$lg_rente_dep_vfun), value = T)
@@ -270,9 +279,10 @@ dep_table <- function(
 		, .(VAP_garantie_dep = sum(VAP_dep))
 		, by = c(res_incNames, res_dimsButAge_vfun) # "inc_age_vis" a generaliser --> res_incNames ? Vérifier si c'est bon
 	]
+} # t_VAP_gie_dep
 
-	# plots
-
+# 5 - plots ----
+{
 	wk$plots <- list()
 	p_PRC <- plotPRCRes(wk$results$t_VAP_gie_dep_vfun, var = "inc_age_vis")
 	wk$plots$PRC <- p_PRC
@@ -281,6 +291,10 @@ dep_table <- function(
 		geom_col() +
 		coord_flip()
 	wk$plots$timer <- p_timer
+}
+
+# tests ----
+{
 	# wk$results$t_VAP_gie_dep_vfun[
 	# 	, .(nb_lines = .N, maxAgeSous = max(dim_dif_age_vis__anc_ct))
 	# 	, by =  .(
@@ -298,11 +312,13 @@ dep_table <- function(
 	# 	& inc_age_vis == 30
 	# 	# & inc_grp_age_vis__anc_ct == 7
 	# 	] # reste a corriger : il ne faut pas supprimer les differentes inc
-
-	if (detailedRes) return(wk) else return(wk$results$t_VAP_gie_dep_vfun)
-
 }
 
+
+if (detailedRes) return(wk) else return(wk$results$t_VAP_gie_dep_vfun)
+################################################################################
+################################################################################
+} # fin fonction
 
 #TODO :
 # dimensions : vraiment ok ? a verifier
