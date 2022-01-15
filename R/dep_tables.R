@@ -24,7 +24,7 @@ dep_table <- function(
 ################################################################################
 ################################################################################
 
-# 0 - init ---------------------------------
+# 0 - init ---------------------------------------------------------------------
 {
 	wk <- list()
 	manualrun <- T
@@ -32,9 +32,9 @@ dep_table <- function(
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
 		# wk <- list()
-		# library(data.table)
-		# library(R.AlphA)
-		# library(stringr)
+		require(data.table)
+		require(R.AlphA)
+		require(stringr)
 		detailedRes = T
 		timer_messages = T
 		{
@@ -72,7 +72,7 @@ dep_table <- function(
 	wk$timer <- timer(wk$timer, step = "startfun", message = timer_messages)
 } # manualrun + init wk and timer
 
-# 1 - inputs / ajout commuts ---------------------------------
+# 1 - inputs / ajout commuts ---------------------------------------------------
 wk$inputs <- inputs
 {
 	if(is.null(wk$inputs$t_res)){
@@ -103,42 +103,7 @@ wk$inputs <- inputs
 	wk$timer <- timer(wk$timer, step = "commuts OK", message = timer_messages)
 } # ajout nbs de commut sur toutes les tables
 
-
-# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil ----
-{
-	# {
-	# 	# Il faut fusionner 2 tables avec largeur ET longueur differentes
-	# 	# TODO: ajouter un avertissement si on supprime des lignes
-	# 	# verif : les dimensions en commun ont elles les memes valeurs ?
-	# 	for (testVar in dims_vie_inc$common){
-	# 		# testVar <- "dim_sexe"
-	# 		xVals <- unique(t_vie_commut_filter[, get(testVar)])
-	# 		yVals <- unique(t_inc_commut_filter[, get(testVar)])
-	# 		if(length(setdiff(xVals, yVals))) {
-	# 			message("for column : ", testVar)
-	# 			message("some values are not in common ")
-	# 			message("vals t_vie : ", paste(xVals, collapse = ","))
-	# 			message("vals t_inc : ", paste(yVals, collapse = ","))
-	# 			message(
-	# 				"values not in common : "
-	# 				, paste(
-	# 					collapse = ","
-	# 					, setdiff(xVals, yVals)
-	# 					, setdiff(yVals, xVals)
-	# 				) # attention bug, a revoir
-	# 			)
-	# 		}
-	# 	}
-	# } # checking if values are the sames for common dims
-	# {
-	# 	if (length(dims_vie_inc$exclusive)>0){
-	# 		warning(call. = T
-	# 				, "incidence and mortality table have different sets of dimension"
-	# 				, "\n exclusive cols : "
-	# 				, paste(dims_vie_inc$exclusive, collapse = ","))
-	# 	}
-	# } # checking if dimensions are the same
-} # checks --> to be moved in mergeLifeTables function
+# 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil ---------
 {
 	m_vie_inc_vfun <- mergeLifeTables(
 		t_vie_commut, xName = "vie"
@@ -172,7 +137,7 @@ wk$inputs <- inputs
 } # _2.3 - t_pres
 
 
-# 3 - lg_rente_dep ----
+# 3 - lg_rente_dep -------------------------------------------------------------
 # Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
 # aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
 {
@@ -259,7 +224,10 @@ wk$inputs <- inputs
 	)
 	merge_pres_tax_p_dep_vfun <- merge(
 		merge_pres_tax_lx_age_dep_vfun
-		, t_inc_commut[, c(.SD, .(dim_age_dep = inc, p_dep = qx)), .SDcols = compare_dims_merge_inc_vfun$yVars]
+		, t_inc_commut[
+			, c(.SD, .(dim_age_dep = inc, p_dep = qx))
+			, .SDcols = compare_dims_merge_inc_vfun$yVars
+			]
 		, by = c("dim_age_dep", compare_dims_merge_inc_vfun$common)
 	)
 	merge_pres_tax_p_dep_vfun[, p_survie := lx_pres / lx_age_vis]
@@ -270,7 +238,7 @@ wk$inputs <- inputs
 } # on rajoute la proba de tomber en dep a chaque age_vis
 
 
-# 4 - t_VAP_gie_dep ----
+# 4 - t_VAP_gie_dep ------------------------------------------------------------
 {
 	dimCols_vfun <- grep("^dim_",names(wk$results$lg_rente_dep_vfun), value = T)
 	res_dimsButAge_vfun <- setdiff(dimCols_vfun, "dim_age_dep")
@@ -281,19 +249,22 @@ wk$inputs <- inputs
 	]
 } # t_VAP_gie_dep
 
-# 5 - plots ----
+# 5 - plots --------------------------------------------------------------------
 {
 	wk$plots <- list()
 	p_PRC <- plotPRCRes(wk$results$t_VAP_gie_dep_vfun, var = "inc_age_vis")
 	wk$plots$PRC <- p_PRC
 	wk$timer <- timer(wk$timer, step = "all OK", message = timer_messages)
-	p_timer <- ggplot(wk$timer, aes(x = reorder(step, - wk$timer$heure_seconds), y = dt_seconds)) +
+	p_timer <- ggplot(
+		wk$timer
+		, aes(x = reorder(step, - wk$timer$heure_seconds), y = dt_seconds)
+	) +
 		geom_col() +
 		coord_flip()
 	wk$plots$timer <- p_timer
 }
 
-# tests ----
+# tests ------------------------------------------------------------------------
 {
 	# wk$results$t_VAP_gie_dep_vfun[
 	# 	, .(nb_lines = .N, maxAgeSous = max(dim_dif_age_vis__anc_ct))
