@@ -252,7 +252,7 @@ wk$inputs <- inputs
 # 5 - plots --------------------------------------------------------------------
 {
 	wk$plots <- list()
-	p_PRC <- plotPRCRes(wk$results$t_VAP_gie_dep_vfun, var = "inc_age_vis")
+	p_PRC <- plotPRCRes(wk$results$t_VAP_gie_dep_vfun, var = age_vis_name)
 	wk$plots$PRC <- p_PRC
 	wk$timer <- timer(wk$timer, step = "all OK", message = timer_messages)
 	p_timer <- ggplot(
