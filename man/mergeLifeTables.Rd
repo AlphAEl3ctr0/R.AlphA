@@ -4,7 +4,15 @@
 \alias{mergeLifeTables}
 \title{merge (cross-join ?) life tables}
 \usage{
-mergeLifeTables(XTbl, YTbl, valPatt = "^qx$", xName, yName)
+mergeLifeTables(
+  XTbl,
+  YTbl,
+  valPatt = "^qx$",
+  xName,
+  yName,
+  maxRows = 1e+07,
+  message = F
+)
 }
 \arguments{
 \item{XTbl}{"left" table}
@@ -16,6 +24,11 @@ mergeLifeTables(XTbl, YTbl, valPatt = "^qx$", xName, yName)
 \item{xName}{name of X tabl, used to rename duplicate columns}
 
 \item{yName}{name of Y tabl, used to rename duplicate columns}
+
+\item{maxRows}{if expected rows after merge are higher than maxRows, function}
+
+\item{message}{show expected and observed lines to check calculations
+will stop executing}
 }
 \description{
 given 2 prefixed life tables, merges them on common dims and

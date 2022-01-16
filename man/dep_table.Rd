@@ -9,7 +9,9 @@ dep_table(
   detailedRes = F,
   dim_age_dep_name = "dim_age_dep",
   i = 0,
-  timer_messages = F
+  timer_messages = F,
+  merge_messages = F,
+  maxRows = 1e+07
 )
 }
 \arguments{
@@ -22,6 +24,10 @@ dep_table(
 \item{i}{actualisation rate --> not yet}
 
 \item{timer_messages}{Should we call messages from the timer function ?}
+
+\item{merge_messages}{Should we print tables sizes ?}
+
+\item{maxRows}{set a limit for the number of lines to avoid crashes}
 }
 \description{
 compute Expected Present Value of long-term care annuities, in

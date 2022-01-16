@@ -7,8 +7,19 @@
 #' @param valPatt pattern for value columns
 #' @param xName name of X tabl, used to rename duplicate columns
 #' @param yName name of Y tabl, used to rename duplicate columns
+#' @param maxRows if expected rows after merge are higher than maxRows, function
+#' @param message show expected and observed lines to check calculations
+#' will stop executing
 #' @export
-mergeLifeTables <- function(XTbl, YTbl, valPatt = "^qx$", xName, yName){
+mergeLifeTables <- function(
+	XTbl
+	, YTbl
+	, valPatt = "^qx$"
+	, xName
+	, yName
+	, maxRows = 1e7
+	, message = F
+){
 	manualrun <- T
 	manualrun <- F
 	if (manualrun) {
@@ -23,7 +34,6 @@ mergeLifeTables <- function(XTbl, YTbl, valPatt = "^qx$", xName, yName){
 			inputPath <- file.path(workRRoot, "pop stats", "INPUTS") #chemin dossier inputs
 		}
 		tbls <- readRDS(file.path(inputPath,"tables.rds"))
-		tbls$classic$t_vie
 		nRowsDftTable <- 100
 		t_res <- data.table(
 			inc_anc_ct = 1:nRowsDftTable
@@ -34,30 +44,85 @@ mergeLifeTables <- function(XTbl, YTbl, valPatt = "^qx$", xName, yName){
 		valPatt <- "^qx$"
 		xName <- "test"
 		yName <- "aussitesT"
+		XTbl <- tbls$qalydays$lg_survie_hors_dep
+		YTbl <- tbls$qalydays$incidence
 	}
 
 
-	dimsXY <- compareVars(XTbl, YTbl, pattern = "^dim_")
-	incsXY <- compareVars(XTbl, YTbl, pattern = "^inc_")
+	dimsIncsXY <- compareVars(XTbl, YTbl, pattern = "^dim_|^inc_")
 	valCols <- compareVars(XTbl, YTbl, valPatt)
-	# if (length(valCols$common)!=1) {
-	# 	if (length(valCols$xVars) == 0) XTbl <- Complete_commut(XTbl)
-	# 	if (length(valCols$yVars) == 0) YTbl <- Complete_commut(YTbl)
-	# }
 
-	xPart <- XTbl[, .SD, .SDcols = c(dimsXY$xVars, incsXY$xVars, valCols$xVars)]
-	yPart <- YTbl[, .SD, .SDcols = c(dimsXY$yVars, incsXY$yVars, valCols$yVars)]
-	# m_vie_inc <- merge(
-	# 	all=F
-	# 	, x = t_vie_commut_filter[, c(.SD, .(qx_vie = qx, age = inc)), .SDcols = c(dims_vie_inc$xVars)]
-	# 	, y = t_inc_commut_filter[, c(.SD, .(qx_inc = qx, age = inc)), .SDcols = c(dims_vie_inc$yVars)]
-	# 	, by = c("age",dims_vie_inc$common)
-	# )
+	intersects <- data.table(
+		varName = character()
+		, Xlength = numeric()
+		, Ylength = numeric()
+		, intersectLength = numeric()
+	)
+	# Il faut fusionner 2 tables avec largeur ET longueur differentes
+	# TODO: ajouter un avertissement si on supprime des lignes
+	# verif : les dimensions en commun ont elles les memes valeurs ?
+	for (testVar in dimsIncsXY$common){
+		# testVar <- "dim_sexe"
+		xVals <- unique(XTbl[, get(testVar)])
+		yVals <- unique(YTbl[, get(testVar)])
+
+		intersects_add <- data.table(
+			varName = testVar
+			, intersectLength = length(intersect(xVals, yVals))
+		)
+		intersects <- rbind(intersects, intersects_add, fill = TRUE)
+		if(length(setdiff(xVals, yVals))) {
+			message("for column : ", testVar)
+			message("some values are not in common ")
+			message("vals X : ", paste(xVals, collapse = ","))
+			message("vals Y : ", paste(yVals, collapse = ","))
+			message(
+				"values not in common : "
+				, paste(
+					collapse = ","
+					, setdiff(xVals, yVals)
+					, setdiff(yVals, xVals)
+				) # attention bug, a revoir
+			)
+		} # prevenir si des valeurs pas en commmun : pas tres utile
+	}
+
+	for (testVar in dimsIncsXY$onlyX){
+		# testVar <- "dim_annee_en_cours"
+		xVals <- unique(XTbl[, get(testVar)])
+		intersects_add <- data.table(
+			varName = testVar
+			, Xlength = length(xVals)
+		)
+		intersects <- rbind(intersects, intersects_add, fill=TRUE)
+	}
+	for (testVar in dimsIncsXY$onlyY){
+		# testVar <- "dim_annee_en_cours"
+		yVals <- unique(YTbl[, get(testVar)])
+		intersects_add <- data.table(
+			varName = testVar
+			, Ylength = length(yVals)
+		)
+		intersects <- rbind(intersects, intersects_add, fill=TRUE)
+	}
+	intersects
+	intersects[, testMax := pmax(intersectLength, Xlength, Ylength, na.rm = T)]
+	intersectsButGrp <- intersects[!str_detect(varName, "dim_dif_|inc_grp_")]
+	expectedLines <- prod(intersectsButGrp$testMax)
+	if(expectedLines > maxRows){
+		stop("expected lines (", sepThsd(expectedLines), ") is greater than maxRows ("
+			 , sepThsd(maxRows), ") : increase maxRows or reduce tables size."
+		)
+	}
+	if(message) message("expected lines : ", sepThsd(expectedLines))
+
+	xPart <- XTbl[, .SD, .SDcols = c(dimsIncsXY$xVars, valCols$xVars)]
+	yPart <- YTbl[, .SD, .SDcols = c(dimsIncsXY$yVars, valCols$yVars)]
 	XY <- merge(
 		all=F
 		, x = xPart[, cst := TRUE]
 		, y = yPart[, cst := TRUE]
-		, by = c("cst", dimsXY$common, incsXY$common)
+		, by = c("cst", dimsIncsXY$common)
 		, allow.cartesian = TRUE
 	)[, cst := NULL]
 	if (!missing(xName)) {
@@ -66,8 +131,7 @@ mergeLifeTables <- function(XTbl, YTbl, valPatt = "^qx$", xName, yName){
 	if (!missing(yName)) {
 		names(XY) <- str_replace_all(names(XY), "\\.y", paste0("_", yName))
 	}
-	# showNA <- XY[is.na(qx_X)]
-
+	if(message) message("observed lines : ", sepThsd(nrow(XY)))
 	return(XY)
 }
 

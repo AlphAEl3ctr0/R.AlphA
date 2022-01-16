@@ -7,6 +7,8 @@
 #' @param detailedRes if FALSE : only returns the table of EPV by age
 #' @param dim_age_dep_name name of the column giving age when turning dependent
 #' @param timer_messages Should we call messages from the timer function ?
+#' @param merge_messages Should we print tables sizes ?
+#' @param maxRows set a limit for the number of lines to avoid crashes
 #' @importFrom readr parse_number
 #' @importFrom stringr str_extract str_detect
 #' @importFrom data.table copy
@@ -20,6 +22,8 @@ dep_table <- function(
 	, dim_age_dep_name = "dim_age_dep"
 	, i = 0
 	, timer_messages = F
+	, merge_messages = F
+	, maxRows = 1e7
 ){
 ################################################################################
 ################################################################################
@@ -37,6 +41,7 @@ dep_table <- function(
 		require(stringr)
 		detailedRes = T
 		timer_messages = T
+		merge_messages = T
 		{
 			library(R.AlphA)
 			root <- dirname(rstudioapi::getSourceEditorContext()$path)
@@ -108,6 +113,8 @@ wk$inputs <- inputs
 	m_vie_inc <- mergeLifeTables(
 		t_vie_commut, xName = "vie"
 		, t_inc_commut, yName = "inc"
+		, maxRows = maxRows
+		, message = merge_messages
 	)
 	wk$timer <- timer(wk$timer, step = "m_vie_inc OK", message = timer_messages)
 } # _2.1 - m_vie_inc
@@ -120,6 +127,8 @@ wk$inputs <- inputs
 		, Complete_commut(wk$inputs$t_res)[, qx_res := qx]
 		, valPatt = "^qx_"
 		# , yName = "res"
+		, maxRows = maxRows
+		, message = merge_messages
 	)
 
 	wk$timer <- timer(wk$timer, step = "m_VIR OK", message = timer_messages)
@@ -179,6 +188,8 @@ wk$inputs <- inputs
 		wk$interm$t_pres[, lx_age_vis := lx]
 		, wk$interm$t_ax
 		, valPatt = "a_pp_x|^lx_"
+		, maxRows = maxRows
+		, message = merge_messages
 	)
 	wk$timer <- timer(wk$timer, step = "merge_pres_tax OK", message = timer_messages)
 } # merge t_pres and t_ax
@@ -214,6 +225,9 @@ wk$inputs <- inputs
 		# , all = T # reste a voir si all doit etre T ou F
 	)
 	wk$timer <- timer(wk$timer, step = "merge_pres_tax_lx_age_dep OK", message = timer_messages)
+	if(merge_messages) {message(
+		"rows m_pres_tax_lx_age_dep : ",sepThsd(nrow(merge_pres_tax_lx_age_dep))
+	)}
 } # merge : m_pres_tax and t_pres_select
 {
 	# merge_pres_tax_lx_age_dep$p_dep <- getDepProb$p_dep # bonne pratique mais pr l'instant ne fonctionne pas a cause de l'ordre de la table
@@ -232,7 +246,13 @@ wk$inputs <- inputs
 	)
 	merge_pres_tax_p_dep[, p_survie := lx_pres / lx_age_vis]
 	merge_pres_tax_p_dep[, VAP_dep := p_dep * a_pp_x_dep * p_survie]
+	if(merge_messages) {message(
+		"rows merge_pres_tax_p_dep : ",sepThsd(nrow(merge_pres_tax_p_dep))
+	)}
 	wk$results$lg_rente_dep <- merge_pres_tax_p_dep[dim_age_dep>=get(age_vis_name)]
+	if(merge_messages) {message(
+		"rows lg_rente_dep : ",sepThsd(nrow(wk$results$lg_rente_dep))
+	)}
 	# TODO: gerer aussi la longueur
 	wk$timer <- timer(wk$timer, step = "m_pres_tax_p_dep OK", message = timer_messages)
 } # on rajoute la proba de tomber en dep a chaque age_vis
@@ -246,7 +266,10 @@ wk$inputs <- inputs
 	wk$results$t_VAP_gie_dep <- wk$results$lg_rente_dep[
 		, .(VAP_garantie_dep = sum(VAP_dep))
 		, by = c(res_incNames, res_dimsButAge) # "inc_age_vis" a generaliser --> res_incNames ? Vérifier si c'est bon
-	]
+		]
+	if(merge_messages) {message(
+		"rows t_VAP_gie_dep : ",sepThsd(nrow(wk$results$t_VAP_gie_dep))
+	)}
 } # t_VAP_gie_dep
 
 # 5 - plots --------------------------------------------------------------------

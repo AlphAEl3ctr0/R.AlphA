@@ -12,7 +12,7 @@ listVarsUniques <- function(...){
 		}
 	}
 	countVals <- data.table()
-	
+
 	for (i in 1:length(tablesList)) {
 		# tb <- tablesList[[1]]
 		tb <- tablesList[[i]]
@@ -30,8 +30,8 @@ listVarsUniques <- function(...){
 }
 
 # testListVars <- listVarsUniques(DT1 = DT1, DT2 = DT2, DT3 = DT3)
-# 
-# 
+#
+#
 # undebug(listVarsUniques)
 # debug(listVarsUniques)
 # DT1 <- data.table(a = 1:10)
