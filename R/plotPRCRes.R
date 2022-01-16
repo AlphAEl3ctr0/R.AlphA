@@ -15,9 +15,12 @@ plotPRCRes <- function(
 	if (manualrun) {
 		message("! parameters manually defined inside function for tests. Do not use results !")
 		data = test$results$t_VAP_gie_dep
+		data = wk$results$t_VAP_gie_dep
 		var = "age_vis"
+		var = age_vis_name
 	}
 	sumUp <- data[
+		!is.na(VAP_garantie_dep)
 		, .(
 			meanVAP = mean(VAP_garantie_dep, na.rm = T)
 			, medianVAP = median(VAP_garantie_dep, na.rm = T)
