@@ -71,7 +71,10 @@ mergeLifeTables <- function(
 			, intersectLength = length(intersect(xVals, yVals))
 		)
 		intersects <- rbind(intersects, intersects_add, fill = TRUE)
-		if(length(setdiff(xVals, yVals))) {
+		if(length(c(
+			setdiff(xVals, yVals)
+			, setdiff(yVals, xVals)
+		))) {
 			message("for column : ", testVar)
 			message("some values are not in common ")
 			message("vals X : ", paste(xVals, collapse = ","))
