@@ -264,7 +264,7 @@ wk$inputs <- inputs
 	res_dimsButAge <- setdiff(dimCols, "dim_age_dep")
 	res_incNames <- grep("^inc_", names(wk$results$lg_rente_dep), value = T)
 	wk$results$t_VAP_gie_dep <- wk$results$lg_rente_dep[
-		, .(VAP_garantie_dep = sum(VAP_dep))
+		, .(VAP_garantie_dep = sum(VAP_dep, na.rm = TRUE))
 		, by = c(res_incNames, res_dimsButAge) # "inc_age_vis" a generaliser --> res_incNames ? Vérifier si c'est bon
 		]
 	if(merge_messages) {message(
