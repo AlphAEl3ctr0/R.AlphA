@@ -24,6 +24,9 @@ dep_table <- function(
 	, timer_messages = F
 	, merge_messages = F
 	, maxRows = 1e7
+	, dftResRate = 0
+	, filterAgeSous = T
+	, ageSousMin = 0
 ){
 ################################################################################
 ################################################################################
@@ -39,9 +42,11 @@ dep_table <- function(
 		require(data.table)
 		require(R.AlphA)
 		require(stringr)
+		require(ggplot2)
 		detailedRes = T
 		timer_messages = T
 		merge_messages = T
+		maxRows = 1e7
 		{
 			library(R.AlphA)
 			root <- dirname(rstudioapi::getSourceEditorContext()$path)
@@ -72,6 +77,7 @@ dep_table <- function(
 		inputs <- tbls$smallTables; dim_age_dep_name = "dim_age_dep"   # tables d'input : smallTables
 		# names(tbls$bigTables$bigTable_1)
 		inputs <- tbls$simpleTables; dim_age_dep_name <- "dim_x"
+		inputs <- tbls$classic; dim_age_dep_name <- "dim_age_dep"
 	}
 	wk$timer <- timer(start = T, message = timer_messages)
 	wk$timer <- timer(wk$timer, step = "startfun", message = timer_messages)
@@ -85,7 +91,9 @@ wk$inputs <- inputs
 		nRowsDftTable <- 100
 		t_res <- data.table(
 			inc_anc_ct = 1:nRowsDftTable
-			, res_rates = seq(from = 0.12, to = 0.03, length.out = nRowsDftTable)
+			, res_rates = seq(
+				from = dftResRate, to = dftResRate, length.out = nRowsDftTable
+			)
 		)
 		t_res$lx <- qx_to_lx(t_res, incName = "inc_anc_ct", qxName = "res_rates")
 		wk$inputs$t_res <- t_res[, .(inc_anc_ct, lx)]
@@ -134,6 +142,13 @@ wk$inputs <- inputs
 	wk$timer <- timer(wk$timer, step = "m_VIR OK", message = timer_messages)
 } # _2.2 - m_vie_inc_resils
 {
+	age_vis_name <- grep("inc_", names(wk$inputs$t_vie), value = TRUE)
+	if (filterAgeSous) {
+		anc_ct_name <- grep("inc_", names(wk$inputs$t_res), value = TRUE)
+		m_VIR <- m_VIR[(get(age_vis_name) - get(anc_ct_name)) >= ageSousMin]
+	}
+	# merge_pres_tax[dim_age_dep>=age_vis] # plus tard : filtrer pour efficacité
+
 	m_pres <- groupIncs(m_VIR)
 	m_pres[, qx := qx_vie+ qx_inc + qx_res]
 	incgrp <- grep("inc_grp_", names(m_pres), value = TRUE)
@@ -197,8 +212,6 @@ wk$inputs <- inputs
 	# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
 	# du coup dim_age_dep, age_vis sont a peu pres obligatoires
 	dimList_merge <- compareVars(merge_pres_tax, wk$interm$t_pres, "dim_")
-	age_vis_name <- grep("inc_", names(wk$inputs$t_vie), value = TRUE)
-	# merge_pres_tax[dim_age_dep>=age_vis] # plus tard : filtrer pour efficacité
 	# on re-merge pour avoir le lx de l'age_dep et non de l'age vis (+ tard : Dx)
 	# pour t_pres il faut :
 		# colonne d'info : lx_pres
@@ -264,7 +277,10 @@ wk$inputs <- inputs
 	res_dimsButAge <- setdiff(dimCols, "dim_age_dep")
 	res_incNames <- grep("^inc_", names(wk$results$lg_rente_dep), value = T)
 	wk$results$t_VAP_gie_dep <- wk$results$lg_rente_dep[
-		, .(VAP_garantie_dep = sum(VAP_dep, na.rm = TRUE))
+		, .(
+			VAP_garantie_dep = sum(VAP_dep, na.rm = TRUE)
+			, nb_lines = .N
+		)
 		, by = c(res_incNames, res_dimsButAge) # "inc_age_vis" a generaliser --> res_incNames ? Vérifier si c'est bon
 		]
 	if(merge_messages) {message(

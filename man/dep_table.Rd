@@ -11,7 +11,10 @@ dep_table(
   i = 0,
   timer_messages = F,
   merge_messages = F,
-  maxRows = 1e+07
+  maxRows = 1e+07,
+  dftResRate = 0,
+  filterAgeSous = T,
+  ageSousMin = 0
 )
 }
 \arguments{
