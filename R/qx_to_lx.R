@@ -26,6 +26,7 @@ qx_to_lx <- function(
 		qxName = "res_rates"
 		dimsNames <- ""
 		rm(dimsNames)
+		data <- copy(m_pres); incName = age_vis_name ; dimsNames = "dims";qxName = "qx"
 	}
 	melt_maintien <- copy(data)
 
@@ -68,7 +69,8 @@ qx_to_lx <- function(
 		, by = c("key")
 		, all.x = T
 	)[order(dims, inc)]
-	melt_maintien_lx[inc==min(inc), lx := 1]
+	melt_maintien_lx[, minInc := min(inc), by = "dims"]
+	melt_maintien_lx[inc==minInc, lx := 1]
 
 	return(melt_maintien_lx[order(retain_order)]$lx)
 
