@@ -92,17 +92,17 @@ dep_table <- function(
 # 1 - inputs / ajout commuts ---------------------------------------------------
 wk$inputs <- inputs
 {
+	age_vis_name <- grep("inc_", names(wk$inputs$t_vie), value = TRUE)
 	if(is.null(wk$inputs$t_res)){
+		ageVisList <- unique(wk$inputs$t_vie[, ..age_vis_name])
 		print("no t_res")
-		nRowsDftTable <- 100
-		t_res <- data.table(
-			inc_anc_ct = 1:nRowsDftTable
-			, res_rates = seq(
-				from = dftResRate, to = dftResRate, length.out = nRowsDftTable
-			)
-		)
-		t_res$lx <- qx_to_lx(t_res, incName = "inc_anc_ct", qxName = "res_rates")
-		wk$inputs$t_res <- t_res[, .(inc_anc_ct, lx)]
+		ageVisList[, res_rates := dftResRate]
+		t_res <- copy(ageVisList)
+		t_res$lx <- qx_to_lx(t_res, incName = age_vis_name, qxName = "res_rates")
+		wk$inputs$t_res <- t_res[
+			, .SD
+			, .SDcols = c(age_vis_name, "lx")
+			]
 	}
 } # default t_res
 {
@@ -145,7 +145,6 @@ wk$inputs <- inputs
 	wk$timer <- timer(wk$timer, step = "m_VIR OK", message = timer_messages)
 } # _2.2 - m_vie_inc_resils
 {
-	age_vis_name <- grep("inc_", names(wk$inputs$t_vie), value = TRUE)
 	if (filterAgeSous) {
 		anc_ct_name <- grep("inc_", names(wk$inputs$t_res), value = TRUE)
 		m_VIR <- m_VIR[(get(age_vis_name) - get(anc_ct_name)) >= ageSousMin]
