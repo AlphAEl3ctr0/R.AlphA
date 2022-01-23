@@ -9,6 +9,9 @@
 #' @param timer_messages Should we call messages from the timer function ?
 #' @param merge_messages Should we print tables sizes ?
 #' @param maxRows set a limit for the number of lines to avoid crashes
+#' @param dftResRate if no t_res provided, which res rate should be used (cst)
+#' @param filterAgeSous should the function filter on (age_vis - anc_ct)
+#' @param ageSousMin if filterAgeSous, which age (age_vis - anc_ct) is the minimum
 #' @importFrom readr parse_number
 #' @importFrom stringr str_extract str_detect
 #' @importFrom data.table copy
@@ -47,6 +50,9 @@ dep_table <- function(
 		timer_messages = T
 		merge_messages = T
 		maxRows = 1e7
+		dftResRate = 0
+		filterAgeSous = T
+		ageSousMin = 0
 		{
 			library(R.AlphA)
 			root <- dirname(rstudioapi::getSourceEditorContext()$path)
@@ -62,7 +68,6 @@ dep_table <- function(
 		# inputs : t_vie / t_inc / lg_maintien
 		inputs <- list()
 		tbls <- readRDS(file.path(inputPath,"tables.rds"))
-		inputs <- tbls$STMultiVar;dim_age_dep_name = "dim_age_dep"     # tables d'input : smallTables - multivars
 		inputs$lg_maintien <- tbls$lg_maintien; dim_age_dep_name <- "dim_x" # version longue
 		inputs$lg_maintien <- tbls$bigTables$bigTable_1000; dim_age_dep_name <- "dim_x" # version longue et large
 		inputs <- tbls$STPrefix   ; dim_age_dep_name = "dim_age_dep"   # tables d'input : smallTables, avec prefixes
@@ -78,6 +83,7 @@ dep_table <- function(
 		# names(tbls$bigTables$bigTable_1)
 		inputs <- tbls$simpleTables; dim_age_dep_name <- "dim_x"
 		inputs <- tbls$classic; dim_age_dep_name <- "dim_age_dep"
+		inputs <- tbls$STMRes;dim_age_dep_name = "dim_age_dep"     # tables d'input : smallTables - multivars
 	}
 	wk$timer <- timer(start = T, message = timer_messages)
 	wk$timer <- timer(wk$timer, step = "startfun", message = timer_messages)
@@ -149,11 +155,13 @@ wk$inputs <- inputs
 	}
 	# merge_pres_tax[dim_age_dep>=age_vis] # plus tard : filtrer pour efficacité
 
-	m_pres <- groupIncs(m_VIR)
+	m_pres <- cbind(m_VIR, groupIncsV2(m_VIR))
 	m_pres[, qx := qx_vie+ qx_inc + qx_res]
-	incgrp <- grep("inc_grp_", names(m_pres), value = TRUE)
-	m_pres$lx <- qx_to_lx(m_pres, incName = incgrp, dimsNames = "dims")
-	m_pres[is.na(lx)] # devrait etre vide
+	m_pres$dims <- dimsCol(m_pres)
+	m_pres$lx <- qx_to_lx(m_pres, incName = age_vis_name, dimsNames = "dims")
+	if (nrow(m_pres[is.na(lx)])) warning(
+		"some lines in m_pres don't have an lx : expect bugs"
+	)  # devrait etre vide
 	dimDifNm <- grep("dim_dif_", names(m_pres), value = TRUE)
 
 	wk$timer <- timer(wk$timer, step = "m_pres OK", message = timer_messages)
@@ -165,7 +173,7 @@ wk$inputs <- inputs
 # Jointure t_pres et lg_maintien, afin d'afficher pour chaque age vu
 # aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
 {
-	t_pres_commut <- Complete_commut(wk$interm$t_pres, incName = "inc_grp_.*", i = i)
+	t_pres_commut <- Complete_commut(wk$interm$t_pres, incName = age_vis_name, i = i)
 	wk$timer <- timer(wk$timer, step = "t_pres_commut OK", message = timer_messages)
 } # add commuts to t_pres
 {
@@ -222,7 +230,7 @@ wk$inputs <- inputs
 	t_pres_select <- wk$interm$t_pres[
 		, c(.SD, .(lx_pres = lx, age_vis = get(age_vis_name)))
 		, .SDcols = dimList_merge$yVars
-		][order(get(dimDifNm), age_vis)]
+		]#[order(get(dimDifNm), age_vis)] # inutile de trier normalement ?
 } # t_pres_select : selection / renommage colonnes
 {
 	wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep", message = timer_messages)

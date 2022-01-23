@@ -31,6 +31,12 @@ dep_table(
 \item{merge_messages}{Should we print tables sizes ?}
 
 \item{maxRows}{set a limit for the number of lines to avoid crashes}
+
+\item{dftResRate}{if no t_res provided, which res rate should be used (cst)}
+
+\item{filterAgeSous}{should the function filter on (age_vis - anc_ct)}
+
+\item{ageSousMin}{if filterAgeSous, which age (age_vis - anc_ct) is the minimum}
 }
 \description{
 compute Expected Present Value of long-term care annuities, in
