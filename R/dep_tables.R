@@ -108,9 +108,6 @@ wk$inputs <- inputs
 {
 	if (missing(i)) {
 		message("actualisation rate (i) not provided : set to 0 by default")
-	} else if (i>0) {
-		warning("you provided i : it is not correctly supported yet ",
-				"so do not use results.")
 	}
 } # warning about i
 {
@@ -208,9 +205,9 @@ wk$inputs <- inputs
 {
 	wk$timer <- timer(wk$timer, step = "starting merge pres t_ax", message = timer_messages)
 	merge_pres_tax <- mergeLifeTables(
-		wk$interm$t_pres[, lx_age_vis := lx]
+		t_pres_commut[, Dx_age_vis := Dx]
 		, wk$interm$t_ax
-		, valPatt = "a_pp_x|^lx_"
+		, valPatt = "a_pp_x|^Dx_"
 		, maxRows = maxRows
 		, message = merge_messages
 	)
@@ -219,7 +216,7 @@ wk$inputs <- inputs
 {
 	# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
 	# du coup dim_age_dep, age_vis sont a peu pres obligatoires
-	dimList_merge <- compareVars(merge_pres_tax, wk$interm$t_pres, "dim_")
+	dimList_merge <- compareVars(merge_pres_tax, t_pres_commut, "dim_")
 	# on re-merge pour avoir le lx de l'age_dep et non de l'age vis (+ tard : Dx)
 	# pour t_pres il faut :
 		# colonne d'info : lx_pres
@@ -227,8 +224,8 @@ wk$inputs <- inputs
 		# age_vis sera utilisé comme "age_dep" lors de la jointure avec
 		# m_pres_tax, afin d'obtenir le lx de chaque age_dep et donc la
 		# proba d'etre toujours present a l'arrivee a chaque age dep
-	t_pres_select <- wk$interm$t_pres[
-		, c(.SD, .(lx_pres = lx, age_vis = get(age_vis_name)))
+	t_pres_select <- t_pres_commut[
+		, c(.SD, .(Dx_pres = Dx, age_vis = get(age_vis_name)))
 		, .SDcols = dimList_merge$yVars
 		]#[order(get(dimDifNm), age_vis)] # inutile de trier normalement ?
 } # t_pres_select : selection / renommage colonnes
@@ -265,8 +262,8 @@ wk$inputs <- inputs
 			]
 		, by = c("dim_age_dep", compare_dims_merge_inc$common)
 	)
-	merge_pres_tax_p_dep[, p_survie := lx_pres / lx_age_vis]
-	merge_pres_tax_p_dep[, VAP_dep := p_dep * a_pp_x_dep * p_survie]
+	merge_pres_tax_p_dep[, Ex_dep := Dx_pres / Dx_age_vis]
+	merge_pres_tax_p_dep[, VAP_dep := p_dep * a_pp_x_dep * Ex_dep]
 	if(merge_messages) {message(
 		"rows merge_pres_tax_p_dep : ",sepThsd(nrow(merge_pres_tax_p_dep))
 	)}
