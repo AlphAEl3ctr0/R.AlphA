@@ -10,7 +10,8 @@ Complete_commut(
   dimNames = "dim_.*",
   incName = "(inc_.*)|age|x",
   valName = "(val_.*)|lx",
-  messages = FALSE
+  messages = FALSE,
+  keep_order = TRUE
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ Complete_commut(
 \item{valName}{lx}
 
 \item{messages}{= FALSE}
+
+\item{keep_order}{should we keep order of the input table ?}
 }
 \description{
 from lxTable and given act rate, adds commut columns

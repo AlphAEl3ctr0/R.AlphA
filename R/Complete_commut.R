@@ -7,6 +7,7 @@
 #' @param incName the x in "lx". Most of the time, age. for dependence tables, usually the nb of years since turning dependent
 #' @param valName lx
 #' @param messages = FALSE
+#' @param keep_order should we keep order of the input table ?
 #' @importFrom readr parse_number
 #' @importFrom stringr str_extract str_detect
 #' @export
@@ -17,6 +18,7 @@ Complete_commut <- function(
 	, incName	= "(inc_.*)|age|x"
 	, valName	= "(val_.*)|lx"
 	, messages	= FALSE
+	, keep_order = TRUE
 ){
 	manualrun <- T
 	manualrun <- F
@@ -40,11 +42,20 @@ Complete_commut <- function(
 		# lxTable = tbls$bigTables$bigTable_200 ; dimNames = c("x", "sexe", "newDimTest") ; incName = "anc"
 		lxTable = tbls$smallTables$t_vie ; incName = "age_vis"
 		lxTable = tbls$woPrefixes$TH ; incName = "(inc_.*)|age|x" # voir si on gere les tables classiques automatiquement (sans preciser qui est inc/val)
+		{
+			lxTable <- tbls$classic$t_inc[dim_type_dep == "dp" & inc_age > 90]
+			incSupp <- lxTable[inc_age>max(inc_age) - 5]
+			incSupp [, inc_age := inc_age + 5]
+			lxTable <- rbind(lxTable, incSupp)
+			incName = "inc_age"
+		}
 		# lxTable = tbls$woPrefixes$bigTable_10 ; incName = "anc" ; dimNames = c("x", "sexe", "newDimTest")
 		messages = T
 		i = 0
+		keep_order = TRUE
 	}
 	tableToFill <- as.data.table(copy(lxTable))
+	tableToFill[, cc_index := 1:.N]
 	if(missing(i)) {message("i is missing : set to 0 by default"); i <- 0}
 	v <- 1/(1+i)
 	# identifier les colonnes de la table : inc / val / dim / autres ----
@@ -144,6 +155,11 @@ Complete_commut <- function(
 		# tableToFill_Nx[, key_names := NULL]
 		# tableToFill_Nx[, key_names := paste(key, dims, collapse = "°°")]
 		tableToFill_Nx
+		if (keep_order) {
+			finalTable <- tableToFill_Nx[order(cc_index)]
+		} else {
+			finalTable <- tableToFill_Nx
+		}
 
-	return(tableToFill_Nx)
+	return(finalTable)
 }
