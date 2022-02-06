@@ -12,18 +12,27 @@ dimsCol <- function(
 	, pattern = "dim_"
 	, perl = TRUE
 ){
+	manualrun <- T
+	manualrun <- F
+	if (manualrun) {
+		warning("! parameters manually defined inside function 'dimsCol' for tests. Do not use results !")
+		data = commutTable
+		separator = "_"
+		pattern = "dim_|inc_"
+		perl = TRUE
+	}
 	# voir si on a besoin d'importer data.table en entier ?
 	# data <- m_VIR # for manualRun
 
 	wkTbl <- as.data.table(copy(data))
 	wkTbl [, dimsCols_index := 1:.N]
 	{
-		dimColumns <- grep(
+		dimColumns <- stringr::str_sort(grep(
 			names(data) # 2022.02.06 colonnes de data et non wkTbl, car on a rajoute des colonnes interm
 			, pattern = pattern
 			, value = T
 			, perl = perl
-		)
+		))
 		wkTbl[
 			, dims := do.call(paste, c(.SD, sep = separator))
 			, .SDcols = dimColumns
