@@ -4,7 +4,7 @@
 \alias{dimsCol}
 \title{Long-term care EPV}
 \usage{
-dimsCol(data, separator = "_", pattern = "dim_")
+dimsCol(data, separator = "_", pattern = "dim_", perl = TRUE)
 }
 \arguments{
 \item{data}{a data set in which columns are searched}
@@ -12,6 +12,8 @@ dimsCol(data, separator = "_", pattern = "dim_")
 \item{separator}{to separate column values}
 
 \item{pattern}{default is "dim_" to get dimensions. use another one if u like}
+
+\item{perl}{will be passed to grep when searching columns}
 }
 \description{
 give a column with concatenation of other columns by pattern
