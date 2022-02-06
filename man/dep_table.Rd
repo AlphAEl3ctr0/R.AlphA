@@ -6,11 +6,11 @@
 \usage{
 dep_table(
   inputs,
-  detailedRes = F,
+  detail = F,
   dim_age_dep_name = "dim_age_dep",
   i = 0,
-  timer_messages = F,
-  merge_messages = F,
+  tmrMsg = F,
+  mrgMsg = F,
   maxRows = 1e+07,
   dftResRate = 0,
   filterAgeSous = T,
@@ -20,15 +20,15 @@ dep_table(
 \arguments{
 \item{inputs}{3 tables : incidence rate / mortality / dependents mortality}
 
-\item{detailedRes}{if FALSE : only returns the table of EPV by age}
+\item{detail}{if FALSE : only returns EPV by age. previous name : detailedRes}
 
 \item{dim_age_dep_name}{name of the column giving age when turning dependent}
 
 \item{i}{actualisation rate --> not yet}
 
-\item{timer_messages}{Should we call messages from the timer function ?}
+\item{tmrMsg}{bool : print messages for timer function. prev : timer_messages}
 
-\item{merge_messages}{Should we print tables sizes ?}
+\item{mrgMsg}{bool : print tables sizes. prev : merge_messages}
 
 \item{maxRows}{set a limit for the number of lines to avoid crashes}
 

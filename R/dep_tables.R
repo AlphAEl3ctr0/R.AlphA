@@ -4,10 +4,10 @@
 #'  order to help for PRC (risk-increase provision ?)
 #' @param inputs 3 tables : incidence rate / mortality / dependents mortality
 #' @param i actualisation rate --> not yet
-#' @param detailedRes if FALSE : only returns the table of EPV by age
+#' @param detail if FALSE : only returns EPV by age. previous name : detailedRes
 #' @param dim_age_dep_name name of the column giving age when turning dependent
-#' @param timer_messages Should we call messages from the timer function ?
-#' @param merge_messages Should we print tables sizes ?
+#' @param tmrMsg bool : print messages for timer function. prev : timer_messages
+#' @param mrgMsg bool : print tables sizes. prev : merge_messages
 #' @param maxRows set a limit for the number of lines to avoid crashes
 #' @param dftResRate if no t_res provided, which res rate should be used (cst)
 #' @param filterAgeSous should the function filter on (age_vis - anc_ct)
@@ -21,11 +21,11 @@
 dep_table <- function(
 	# encore beaucoup d'elements a corriger suite prise en compte des resils
 	inputs # objet contenant les 3 tables d'inputs
-	, detailedRes = F
+	, detail = F
 	, dim_age_dep_name = "dim_age_dep"
 	, i = 0
-	, timer_messages = F
-	, merge_messages = F
+	, tmrMsg = F
+	, mrgMsg = F
 	, maxRows = 1e7
 	, dftResRate = 0
 	, filterAgeSous = T
@@ -46,9 +46,9 @@ dep_table <- function(
 		require(R.AlphA)
 		require(stringr)
 		require(ggplot2)
-		detailedRes = T
-		timer_messages = T
-		merge_messages = T
+		detail = T
+		tmrMsg = T
+		mrgMsg = T
 		maxRows = 1e7
 		dftResRate = 0
 		filterAgeSous = T
@@ -85,8 +85,8 @@ dep_table <- function(
 		inputs <- tbls$classic; dim_age_dep_name <- "dim_age_dep"
 		inputs <- tbls$STMRes;dim_age_dep_name = "dim_age_dep"     # tables d'input : smallTables - multivars
 	}
-	wk$timer <- timer(start = T, message = timer_messages)
-	wk$timer <- timer(wk$timer, step = "startfun", message = timer_messages)
+	wk$timer <- timer(start = T, message = tmrMsg)
+	wk$timer <- timer(wk$timer, step = "startfun", message = tmrMsg)
 } # manualrun + init wk and timer
 
 # 1 - inputs / ajout commuts ---------------------------------------------------
@@ -111,12 +111,12 @@ wk$inputs <- inputs
 	}
 } # warning about i
 {
-	wk$timer <- timer(wk$timer, step = "start adding commuts", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "start adding commuts", message = tmrMsg)
 	t_vie_commut <- Complete_commut(wk$inputs$t_vie, incName = "age_vis|inc_.*|age", i = i)
 	t_inc_commut <- Complete_commut(wk$inputs$t_inc, incName = "age_vis|inc_.*|age", i = i)
 	t_res_commut <- Complete_commut(wk$inputs$t_res, incName = "age_vis|inc_.*|age", i = i)
 	lg_maintien_commuts <- Complete_commut(wk$inputs$lg_maintien, i = i)
-	wk$timer <- timer(wk$timer, step = "commuts OK", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "commuts OK", message = tmrMsg)
 } # ajout nbs de commut sur toutes les tables
 
 # 2 - t_pres : lx incluant les P de décès, d'entrée en dep et de résil ---------
@@ -125,9 +125,9 @@ wk$inputs <- inputs
 		t_vie_commut, xName = "vie"
 		, t_inc_commut, yName = "inc"
 		, maxRows = maxRows
-		, message = merge_messages
+		, message = mrgMsg
 	)
-	wk$timer <- timer(wk$timer, step = "m_vie_inc OK", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "m_vie_inc OK", message = tmrMsg)
 } # _2.1 - m_vie_inc
 {
 	# ajout des resiliations
@@ -139,10 +139,10 @@ wk$inputs <- inputs
 		, valPatt = "^qx_"
 		# , yName = "res"
 		, maxRows = maxRows
-		, message = merge_messages
+		, message = mrgMsg
 	)
 
-	wk$timer <- timer(wk$timer, step = "m_VIR OK", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "m_VIR OK", message = tmrMsg)
 } # _2.2 - m_vie_inc_resils
 {
 	if (filterAgeSous) {
@@ -160,7 +160,7 @@ wk$inputs <- inputs
 	)  # devrait etre vide
 	dimDifNm <- grep("dim_dif_", names(m_pres), value = TRUE)
 
-	wk$timer <- timer(wk$timer, step = "m_pres OK", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "m_pres OK", message = tmrMsg)
 	wk$interm$t_pres <- m_pres
 } # _2.3 - t_pres
 
@@ -170,7 +170,7 @@ wk$inputs <- inputs
 # aujourd'hui, ts les ages possibles d'entree en dep, + ax correspondants
 {
 	t_pres_commut <- Complete_commut(wk$interm$t_pres, incName = age_vis_name, i = i)
-	wk$timer <- timer(wk$timer, step = "t_pres_commut OK", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "t_pres_commut OK", message = tmrMsg)
 } # add commuts to t_pres
 {
 	if (missing(dim_age_dep_name)) {
@@ -202,15 +202,15 @@ wk$inputs <- inputs
 		]
 } # t_ax : ax pour chaque age_dep
 {
-	wk$timer <- timer(wk$timer, step = "starting merge pres t_ax", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "starting merge pres t_ax", message = tmrMsg)
 	merge_pres_tax <- mergeLifeTables(
 		t_pres_commut[, Dx_age_vis := Dx]
 		, wk$interm$t_ax
 		, valPatt = "a_pp_x|^Dx_"
 		, maxRows = maxRows
-		, message = merge_messages
+		, message = mrgMsg
 	)
-	wk$timer <- timer(wk$timer, step = "merge_pres_tax OK", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "merge_pres_tax OK", message = tmrMsg)
 } # merge t_pres and t_ax
 {
 	# par quelles variables on peut merge ici ? repertorier les variables qui auront tjrs le meme nom, et celles qu'il faut generaliser
@@ -229,7 +229,7 @@ wk$inputs <- inputs
 		]#[order(get(dimDifNm), age_vis)] # inutile de trier normalement ?
 } # t_pres_select : selection / renommage colonnes
 {
-	wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "starting m_pres_maint_lx_age_dep", message = tmrMsg)
 	# on a deja merge_pres_tax donnant le lx aujourd'hui
 	# on ajoute la colonne lx_pres de la table t_pres_select pour avoir
 	# le lx a chaque age d'entrée en dep potentiel --> proba d'etre tjrs
@@ -241,8 +241,8 @@ wk$inputs <- inputs
 		, by.y = c("age_vis"    , dimList_merge$common)
 		# , all = T # reste a voir si all doit etre T ou F
 	)
-	wk$timer <- timer(wk$timer, step = "merge_pres_tax_lx_age_dep OK", message = timer_messages)
-	if(merge_messages) {message(
+	wk$timer <- timer(wk$timer, step = "merge_pres_tax_lx_age_dep OK", message = tmrMsg)
+	if(mrgMsg) {message(
 		"rows m_pres_tax_lx_age_dep : ",sepThsd(nrow(merge_pres_tax_lx_age_dep))
 	)}
 } # merge : m_pres_tax and t_pres_select
@@ -263,15 +263,15 @@ wk$inputs <- inputs
 	)
 	merge_pres_tax_p_dep[, Ex_dep := Dx_pres / Dx_age_vis]
 	merge_pres_tax_p_dep[, VAP_dep := p_dep * a_pp_x_dep * Ex_dep]
-	if(merge_messages) {message(
+	if(mrgMsg) {message(
 		"rows merge_pres_tax_p_dep : ",sepThsd(nrow(merge_pres_tax_p_dep))
 	)}
 	wk$results$lg_rente_dep <- merge_pres_tax_p_dep[dim_age_dep>=get(age_vis_name)]
-	if(merge_messages) {message(
+	if(mrgMsg) {message(
 		"rows lg_rente_dep : ",sepThsd(nrow(wk$results$lg_rente_dep))
 	)}
 	# TODO: gerer aussi la longueur
-	wk$timer <- timer(wk$timer, step = "m_pres_tax_p_dep OK", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "m_pres_tax_p_dep OK", message = tmrMsg)
 } # on rajoute la proba de tomber en dep a chaque age_vis
 
 
@@ -287,7 +287,7 @@ wk$inputs <- inputs
 		)
 		, by = c(res_incNames, res_dimsButAge) # "inc_age_vis" a generaliser --> res_incNames ? Vérifier si c'est bon
 		]
-	if(merge_messages) {message(
+	if(mrgMsg) {message(
 		"rows t_VAP_gie_dep : ",sepThsd(nrow(wk$results$t_VAP_gie_dep))
 	)}
 } # t_VAP_gie_dep
@@ -297,7 +297,7 @@ wk$inputs <- inputs
 	wk$plots <- list()
 	p_PRC <- plotPRCRes(wk$results$t_VAP_gie_dep, var = age_vis_name)
 	wk$plots$PRC <- p_PRC
-	wk$timer <- timer(wk$timer, step = "all OK", message = timer_messages)
+	wk$timer <- timer(wk$timer, step = "all OK", message = tmrMsg)
 	p_timer <- ggplot(
 		wk$timer
 		, aes(x = reorder(step, - wk$timer$heure_seconds), y = dt_seconds)
@@ -329,7 +329,7 @@ wk$inputs <- inputs
 }
 
 
-if (detailedRes) return(wk) else return(wk$results$t_VAP_gie_dep)
+if (detail) return(wk) else return(wk$results$t_VAP_gie_dep)
 ################################################################################
 ################################################################################
 } # fin fonction
