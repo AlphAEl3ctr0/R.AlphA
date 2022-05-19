@@ -10,7 +10,8 @@ get_commut_vars(
   commutVars,
   cle_commut = "age",
   cle_commut_pop = cle_commut,
-  cle_commut_com = cle_commut
+  cle_commut_com = cle_commut,
+  key_pattern = "dim_|inc_"
 )
 }
 \arguments{
