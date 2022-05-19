@@ -4,7 +4,7 @@
 \alias{save_in_old}
 \title{fonction de sauvegarde dans un dossier old}
 \usage{
-save_in_old()
+save_in_old(sav_filepath = NULL, sav_fileNote = NULL)
 }
 \value{
 nothing, only saves
