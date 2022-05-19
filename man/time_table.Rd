@@ -17,7 +17,7 @@ time_table(tt_message, tt_reset = FALSE, ...)
 nothing, creates a dt in parent environment : maybe not the best practice
 }
 \description{
-keep track of time spent on different steps of code
+previous version - deprecated - use timer
 }
 \examples{
 time_table("step 1")

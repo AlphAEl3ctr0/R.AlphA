@@ -1,5 +1,5 @@
 #' @title Times steps
-#' @description keep track of time spent on different steps of code
+#' @description previous version - deprecated - use timer
 #' @param tt_message mandatory
 #' @param tt_reset to start a new time table from scratch
 #' @param ... any other specification. Choose name for column and value for row
