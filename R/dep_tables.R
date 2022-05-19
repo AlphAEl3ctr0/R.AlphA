@@ -91,6 +91,7 @@ dep_table <- function(
 
 # 1 - inputs / ajout commuts ---------------------------------------------------
 wk$inputs <- inputs
+listVarsUniques(wk$inputs, pattern = "^dim_|^inc_")
 {
 	age_vis_name <- grep("inc_", names(wk$inputs$t_vie), value = TRUE)
 	if(is.null(wk$inputs$t_res)){
@@ -275,7 +276,7 @@ wk$inputs <- inputs
 } # on rajoute la proba de tomber en dep a chaque age_vis
 
 
-# 4 - t_VAP_gie_dep ------------------------------------------------------------
+# 4 - results ------------------------------------------------------------
 {
 	dimCols <- grep("^dim_",names(wk$results$lg_rente_dep), value = T)
 	res_dimsButAge <- setdiff(dimCols, "dim_age_dep")
@@ -291,6 +292,13 @@ wk$inputs <- inputs
 		"rows t_VAP_gie_dep : ",sepThsd(nrow(wk$results$t_VAP_gie_dep))
 	)}
 } # t_VAP_gie_dep
+{
+	wk$results$bothVAP <- mergeLifeTables(
+		t_pres_commut
+		, wk$results$t_VAP_gie_dep
+		, valPatt = "VAP_garantie_dep|a_pp_x|nb_lines"
+	)
+} # ajout de l'ax assure pour prime
 
 # 5 - plots --------------------------------------------------------------------
 {
