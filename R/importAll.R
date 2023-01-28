@@ -4,6 +4,8 @@
 #' @param pattern argument passed to list.fles
 #' @param ignore.case argument passed to list.fles
 #' @param importFunction if you know which function you want to use
+#' @param fill passed to rbind
+#' @param fileList instead of a Pattern
 #' @return the concatenated table
 #' @importFrom openxlsx read.xlsx
 #' @export
@@ -13,6 +15,8 @@ importAll <- function(
 	, pattern = ""
 	, ignore.case = FALSE
 	, importFunction = NULL
+	, fill = F
+	, fileList = NULL
 ){
 	manualrun <- T
 	manualrun <- F
@@ -25,13 +29,42 @@ importAll <- function(
 		pattern = "impall"
 		ignore.case = TRUE
 		importFunction = openxlsx::read.xlsx
+		# lire des rds ?
+		path <- workr_root %>%
+			file.path(
+				"Datacamp"
+				, "Competitions"
+				, "Abalone"
+				, "Results"
+				, "datas"
+			# ) %>% list.files()
+			) %>% print
+		pattern <- "seed_99(1)*\\.rds"
+		importFunction <- NULL
+		fileList <- c(
+			NULL
+			, "/Users/Raphael/Google Drive/WorkR/Datacamp/Competitions/Abalone/Results/datas/compareModels_seed_99.rds"
+			, "/Users/Raphael/Google Drive/WorkR/Datacamp/Competitions/Abalone/Results/datas/compareModels_seed_991.rds"
+		)
 	}
-	filePaths <- data.table(
-		NULL
-		, locPath = list.files(path = path, pattern = pattern, ignore.case = ignore.case, full.names = F)
-		, fulPath = list.files(path = path, pattern = pattern, ignore.case = ignore.case, full.names = T)
-	)
 
+	if (missing(fileList)) {
+		# with a pattern
+		filePaths <- data.table(
+			NULL
+			, locPath = list.files(path = path, pattern = pattern, ignore.case = ignore.case, full.names = F)
+			, fulPath = list.files(path = path, pattern = pattern, ignore.case = ignore.case, full.names = T)
+		)
+	} else {
+		# with a file list
+		filePaths <- data.table(fulPath = fileList) %>%
+			mutate(
+				locPath = fulPath %>%
+					stringr::str_remove(dirname(fulPath)) %>%
+					stringr::str_remove("^/")
+			) %>%
+			as.data.table
+	}
 	# choosing import function depending on extensions
 	if (missing(importFunction)) {
 		if(manualrun) print ("importFunction missing")
@@ -61,13 +94,19 @@ importAll <- function(
 	if (length(unique(filePaths$fun))>1) message("more than 1 type of file : it is very casse gueule (might face problems with column types)")
 	importsList <- mapply(
 		# FUN = function(ful_path, loc_path) importFuntion(ful_path)[, test := loc_path]
-		FUN = function(ful_path, loc_path, importFunction) importFunction(ful_path)[, fName := loc_path]
+		FUN = function(ful_path, loc_path, importFunction){
+			import <- importFunction(ful_path) %>% as.data.table
+			import[, fName := loc_path]
+		}
 		, ful_path = filePaths$fulPath
 		, loc_path = filePaths$locPath
 		, importFunction = filePaths$fun
 		, SIMPLIFY = F
 	)
-	concatenation <- do.call(rbind, importsList)
+	concatenation <- do.call(
+		function(...) rbind(..., fill = fill)
+		, importsList
+	)
 }
 
 # root <- dirname(rstudioapi::getSourceEditorContext()$path)

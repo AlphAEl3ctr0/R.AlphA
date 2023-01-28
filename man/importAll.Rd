@@ -4,7 +4,14 @@
 \alias{importAll}
 \title{fonction pour importer plusieurs fichiers et les concatener dans une meme table}
 \usage{
-importAll(path = ".", pattern = "", ignore.case = FALSE, importFunction = NULL)
+importAll(
+  path = ".",
+  pattern = "",
+  ignore.case = FALSE,
+  importFunction = NULL,
+  fill = F,
+  fileList = NULL
+)
 }
 \arguments{
 \item{path}{argument passed to list.fles}
@@ -14,6 +21,10 @@ importAll(path = ".", pattern = "", ignore.case = FALSE, importFunction = NULL)
 \item{ignore.case}{argument passed to list.fles}
 
 \item{importFunction}{if you know which function you want to use}
+
+\item{fill}{passed to rbind}
+
+\item{fileList}{instead of a Pattern}
 }
 \value{
 the concatenated table
