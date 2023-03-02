@@ -10,7 +10,8 @@ left_join_checks(
   ...,
   req_xAllMatch = 1,
   req_preserved_x = 1,
-  behavior = "error"
+  behavior = "error",
+  showNotFound = F
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ left_join_checks(
 \item{req_preserved_x}{boolean : do you want to ensure that xTable rows are the same after join (no duplicates) ?}
 
 \item{behavior}{character : warning, or error}
+
+\item{showNotFound}{if some x are not found in y, do you want to show them}
 }
 \value{
 the joined table

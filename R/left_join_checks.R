@@ -6,6 +6,7 @@
 #' @param req_preserved_x boolean : do you want to ensure that xTable rows are the same after join (no duplicates) ?
 #' @param req_xAllMatch boolean : do you want to ensure that all x values have found a match in y ?
 #' @param behavior character : warning, or error
+#' @param showNotFound if some x are not found in y, do you want to show them
 #' @return the joined table
 #' @importFrom tibble rowid_to_column rownames_to_column
 #' @importFrom tidyr replace_na
@@ -28,11 +29,13 @@ left_join_checks <- function(
 		, req_xAllMatch = 1
 		, req_preserved_x = 1
 		, behavior = "error"
+		, showNotFound = F
 ){
 	manualrun <- T
 	manualrun <- F
 	if (manualrun) {
 		rm(list = ls())
+		R.AlphA::getLibsR.AlphA()
 		warning("! parameters manually defined inside function 'left_join_checks' for tests. Do not use results !")
 		workRRoot <- root() %>% str_extract(".*WorkR")
 		tbls <- workRRoot %>%
@@ -43,8 +46,7 @@ left_join_checks <- function(
 		y <- data.table(a = 1, age = c(2:4, 4), result = "ok") %>% print
 
 		x <- generate_pop(2E5, age_min = 30, age_max = 36) %>%
-			mutate(inc_age_vis = age_dec(dteNais, dteVision) %>% round,
-				   dim_sexe = sexe)
+			complete_pop
 		y <- tbls$STMRes$t_vie
 		req_xAllMatch = 1
 		req_preserved_x = 1
@@ -96,18 +98,26 @@ left_join_checks <- function(
 		unlist %>%
 		data.frame(req = .) %>%
 		rownames_to_column("check") %>%
+		mutate(req = req %>% as.numeric) %>%
 		mutate(key = str_remove(check, "^chk_|^req_"))
 
 	checksTable <- full_join(valuesTable, reqsTable, by = "key") %>%
 		mutate(is_problem = value != req) %>%
 		select(key, value, req, is_problem) %>%
-		arrange(is_problem %>% desc)
+		mutate(is_problem = is_problem %>% as.numeric) %>%
+		replace_na(list(is_problem = 0)) %>%
+		arrange(is_problem %>% desc, req %>% desc)
 
 	nbPbs <- sum(checksTable$is_problem, na.rm = T)
 
 	if (nbPbs) {
 		commonMsg <- paste0(nbPbs, " problem(s) during merge",
 							"\nsee report for details")
+
+		if (showNotFound & !chk_xAllMatch) {
+			print(joinXY %>% filter(!ljc_inY))
+		}
+
 		if (behavior == "warning") {
 			print(checksTable)
 			warning(commonMsg)
