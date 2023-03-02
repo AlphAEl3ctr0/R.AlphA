@@ -26,19 +26,25 @@ rdate <- function(
 		testdates <- data.table(dtemin = seq.Date(as.Date("2021-01-01"), as.Date("2021-01-10"), by = "1 day"))
 		testdates[, dtemax := dtemin + 50]
 		testdates
-		min = testdates$dtemin
-		max = testdates$dtemax
+		min = testdates$dtemin[1]
+		max = testdates$dtemax[1]
 		sort = FALSE
 		include_hours = FALSE
 
 	}
-	dec_min <- lubridate::decimal_date(as.Date(min))
-	dec_max <- lubridate::decimal_date(as.Date(max))
-	dec_date <- stats::runif(x, min = dec_min, max = dec_max)
-	datesWithHours <- lubridate::date_decimal(dec_date)
-	datesNoHours <- as.Date(datesWithHours)
+	max <- as.Date(max)
+	min <- as.Date(min)
+	if (!include_hours) {
+		daysDiff <- max-min
+		dates <- min + runif(x, 0, daysDiff + 1) %>% floor
+	}
+	if (include_hours) {
+		dec_min <- lubridate::decimal_date(as.Date(min))
+		dec_max <- lubridate::decimal_date(as.Date(max))
+		dec_date <- stats::runif(x, min = dec_min, max = dec_max)
+		dates <- lubridate::date_decimal(dec_date)
+	}
 
-	dates <- if (include_hours) datesWithHours else datesNoHours
 	dates <- if (sort) sort(dates) else dates
 
 	return(dates)
