@@ -2,6 +2,7 @@
 #' @description This function saves the project with date in its name in an "old" dir
 #' @return nothing, only saves
 #' @export
+#' @import ggplot2
 
 save_in_old <- function(sav_filepath = NULL, sav_fileNote = NULL){
 	requireNamespace("rstudioapi")

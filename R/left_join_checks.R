@@ -11,7 +11,7 @@
 #' @importFrom tibble rowid_to_column rownames_to_column
 #' @importFrom tidyr replace_na
 #' @importFrom stringr str_remove
-#' @import dplyr
+#' @rawNamespace import(dplyr, except = c(first, last, between))
 #' @export
 # library(dplyr)
 # library(data.table)
