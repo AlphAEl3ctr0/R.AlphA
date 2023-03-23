@@ -6,8 +6,9 @@ Author: Raphaël FLAMBARD
 Maintainer: Raphaël FLAMBARD <mail@mail.com>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
+    This package provides functions designed as shortcuts for frequently used R calculations
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
-Imports: data.table, lubridate, rstudioapi, stringr, grDevices, graphics, readr, openxlsx, ggplot2
+RoxygenNote: 7.2.3
+Imports: data.table, lubridate, rstudioapi, stringr, grDevices, graphics, readr, openxlsx, ggplot2, dplyr, tibble, tidyr
