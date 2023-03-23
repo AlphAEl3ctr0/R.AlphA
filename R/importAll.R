@@ -21,6 +21,7 @@ importAll <- function(
 	manualrun <- T
 	manualrun <- F
 	if (manualrun) {
+		getLibsR.AlphA()
 		message("! parameters manually defined inside function for tests. Do not use results !")
 		root <- dirname(rstudioapi::getSourceEditorContext()$path)
 		workr_root <- sub("WorkR.*", "WorkR", root)
